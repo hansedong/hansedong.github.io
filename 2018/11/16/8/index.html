@@ -68,7 +68,7 @@
 
 
 
-  <meta name="keywords" content="docker,drone,">
+  <meta name="keywords" content="网络,">
 
 
 
@@ -79,18 +79,18 @@
 
 
 
-<meta name="description" content="引子线上的k8s集群内部，每一台机器，都有2块网卡，一块儿em1（10网段），一个 em2（192网段）。然后，线上的机器，通过iptables限制为：访问192段的服务任意端口都是畅通的，而访问10段的服务端口，只有333端口可以连通。333端口，是线上机器的ssh端口。 线上集群的k8s，使用的calico网络。 线上有一个问题，就是容器访问当前宿主机192段IP的999端口不通，访问其他机器">
-<meta name="keywords" content="docker,drone">
+<meta name="description" content="背景我们都知道，基于Kubernetes的微服务，大行其道，传统部署模式一直都在跟着变化，但其实，在原有业务向服务化方向过度过程中，有些场景可能会变得复杂。   比如说：将Kubernetes的模式应用到开发环节上，这个环节需要频繁的变更代码，微服务的方式，可能就需要不断的：  改代码-&amp;gt;构建镜像-&amp;gt;镜像推送-&amp;gt;部署-&amp;gt;拉去镜像-&amp;gt;生成容器    尤其是PHP的业务，">
+<meta name="keywords" content="网络">
 <meta property="og:type" content="article">
-<meta property="og:title" content="k8s线上集群的机器，重启iptables后，造成CI系统（drone）构建偶发失败，docker run容器无法访问外网问题排查记录">
-<meta property="og:url" content="http://yoursite.com/2018/10/16/3/index.html">
+<meta property="og:title" content="一次对进程大量积压 ESTABLISHED 链接的排查记录">
+<meta property="og:url" content="http://yoursite.com/2018/11/16/8/index.html">
 <meta property="og:site_name" content="国南之境">
-<meta property="og:description" content="引子线上的k8s集群内部，每一台机器，都有2块网卡，一块儿em1（10网段），一个 em2（192网段）。然后，线上的机器，通过iptables限制为：访问192段的服务任意端口都是畅通的，而访问10段的服务端口，只有333端口可以连通。333端口，是线上机器的ssh端口。 线上集群的k8s，使用的calico网络。 线上有一个问题，就是容器访问当前宿主机192段IP的999端口不通，访问其他机器">
+<meta property="og:description" content="背景我们都知道，基于Kubernetes的微服务，大行其道，传统部署模式一直都在跟着变化，但其实，在原有业务向服务化方向过度过程中，有些场景可能会变得复杂。   比如说：将Kubernetes的模式应用到开发环节上，这个环节需要频繁的变更代码，微服务的方式，可能就需要不断的：  改代码-&amp;gt;构建镜像-&amp;gt;镜像推送-&amp;gt;部署-&amp;gt;拉去镜像-&amp;gt;生成容器    尤其是PHP的业务，">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2018-10-30T15:59:08.459Z">
+<meta property="og:updated_time" content="2018-11-15T16:41:28.708Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="k8s线上集群的机器，重启iptables后，造成CI系统（drone）构建偶发失败，docker run容器无法访问外网问题排查记录">
-<meta name="twitter:description" content="引子线上的k8s集群内部，每一台机器，都有2块网卡，一块儿em1（10网段），一个 em2（192网段）。然后，线上的机器，通过iptables限制为：访问192段的服务任意端口都是畅通的，而访问10段的服务端口，只有333端口可以连通。333端口，是线上机器的ssh端口。 线上集群的k8s，使用的calico网络。 线上有一个问题，就是容器访问当前宿主机192段IP的999端口不通，访问其他机器">
+<meta name="twitter:title" content="一次对进程大量积压 ESTABLISHED 链接的排查记录">
+<meta name="twitter:description" content="背景我们都知道，基于Kubernetes的微服务，大行其道，传统部署模式一直都在跟着变化，但其实，在原有业务向服务化方向过度过程中，有些场景可能会变得复杂。   比如说：将Kubernetes的模式应用到开发环节上，这个环节需要频繁的变更代码，微服务的方式，可能就需要不断的：  改代码-&amp;gt;构建镜像-&amp;gt;镜像推送-&amp;gt;部署-&amp;gt;拉去镜像-&amp;gt;生成容器    尤其是PHP的业务，">
 
 
 
@@ -120,13 +120,13 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2018/10/16/3/">
+  <link rel="canonical" href="http://yoursite.com/2018/11/16/8/">
 
 
 
 
 
-  <title>k8s线上集群的机器，重启iptables后，造成CI系统（drone）构建偶发失败，docker run容器无法访问外网问题排查记录 | 国南之境</title>
+  <title>一次对进程大量积压 ESTABLISHED 链接的排查记录 | 国南之境</title>
   
 
 
@@ -295,7 +295,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/10/16/3/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/11/16/8/">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
       <meta itemprop="name" content="国南之境">
@@ -312,7 +312,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">k8s线上集群的机器，重启iptables后，造成CI系统（drone）构建偶发失败，docker run容器无法访问外网问题排查记录</h1>
+          <h1 class="post-title" itemprop="name headline">一次对进程大量积压 ESTABLISHED 链接的排查记录</h1>
         
 
         <div class="post-meta">
@@ -324,8 +324,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-10-16T15:51:13+08:00">
-                2018-10-16
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-11-16T00:33:13+08:00">
+                2018-11-16
               </time>
             
 
@@ -347,19 +347,8 @@
               
               
                 <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
-                  <a href="/categories/docker/" itemprop="url" rel="index">
-                    <span itemprop="name">docker</span>
-                  </a>
-                </span>
-
-                
-                
-                  ， 
-                
-              
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
-                  <a href="/categories/docker/drone/" itemprop="url" rel="index">
-                    <span itemprop="name">drone</span>
+                  <a href="/categories/网络/" itemprop="url" rel="index">
+                    <span itemprop="name">网络</span>
                   </a>
                 </span>
 
@@ -375,7 +364,7 @@
 
           
           
-             <span id="/2018/10/16/3/" class="leancloud_visitors" data-flag-title="k8s线上集群的机器，重启iptables后，造成CI系统（drone）构建偶发失败，docker run容器无法访问外网问题排查记录">
+             <span id="/2018/11/16/8/" class="leancloud_visitors" data-flag-title="一次对进程大量积压 ESTABLISHED 链接的排查记录">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -411,42 +400,80 @@
       
 
       
-        <h4 id="引子"><a href="#引子" class="headerlink" title="引子"></a>引子</h4><p>线上的k8s集群内部，每一台机器，都有2块网卡，一块儿em1（10网段），一个 em2（192网段）。然后，线上的机器，通过iptables限制为：访问192段的服务任意端口都是畅通的，而访问10段的服务端口，只有333端口可以连通。333端口，是线上机器的ssh端口。</p>
-<p>线上集群的k8s，使用的calico网络。</p>
-<p>线上有一个问题，就是容器访问当前宿主机192段IP的999端口不通，访问其他机器192段IP的9999端口畅通。</p>
-<p>我们知道，当从容器访问宿主机的应用时，会重新进入iptables的INPUT链，而线上的iptables INPUT链如下：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">Chain <span class="title">INPUT</span> <span class="params">(policy ACCEPT <span class="number">0</span> packets, <span class="number">0</span> bytes)</span></span></span><br><span class="line"><span class="function">num   pkts bytes target     prot opt in     out     source               destination         </span></span><br><span class="line">1    1477K 2519M cali-INPUT  all  --  *      *       0.0.0.0/0            0.0.0.0/0            /* cali:Cz_u1IQiXIMmKD4c */</span><br><span class="line"><span class="number">2</span>     <span class="number">272</span>K   <span class="number">20</span>M KUBE-SERVICES  all  --  *      *       <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span>/<span class="number">0</span>            <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span>/<span class="number">0</span>            <span class="comment">/* kubernetes service portals */</span></span><br><span class="line"><span class="number">3</span>     <span class="number">273</span>K   <span class="number">20</span>M KUBE-FIREWALL  all  --  *      *       <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span>/<span class="number">0</span>            <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span>/<span class="number">0</span>           </span><br><span class="line"><span class="number">4</span>     <span class="number">263</span>K   <span class="number">20</span>M ACCEPT     all  --  *      *       <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span>/<span class="number">0</span>            <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span>/<span class="number">0</span>            state RELATED,ESTABLISHED</span><br><span class="line"><span class="number">5</span>        <span class="number">0</span>     <span class="number">0</span> ACCEPT     icmp --  *      *       <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span>/<span class="number">0</span>            <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span>/<span class="number">0</span>           </span><br><span class="line"><span class="number">6</span>      <span class="number">393</span> <span class="number">17292</span> ACCEPT     all  --  lo     *       <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span>/<span class="number">0</span>            <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span>/<span class="number">0</span>           </span><br><span class="line"><span class="number">7</span>    <span class="number">11880</span> <span class="number">1019</span>K ACCEPT     all  --  em2    *       <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span>/<span class="number">0</span>            <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span>/<span class="number">0</span>           </span><br><span class="line"><span class="number">8</span>        <span class="number">7</span>   <span class="number">308</span> ACCEPT     tcp  --  *      *       <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span>/<span class="number">0</span>            <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span>/<span class="number">0</span>            tcp dpt:<span class="number">333</span></span><br><span class="line"><span class="number">9</span>     <span class="number">228</span> <span class="number">62052</span> REJECT     all  --  *      *       <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span>/<span class="number">0</span>            <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span>/<span class="number">0</span>            reject-with icmp-host-prohibited</span><br></pre></td></tr></table></figure>
-<p>意思是：</p>
-<p>①：如果报文是途径em2网卡，访问任意其他网卡。则全部放行。（这就是为什么192段的访问全部放行）</p>
-<p>②：如果报文是tcp，不管报文从哪个网卡出来，去往哪个网卡，只要目的端口是333，就放行。（这就是为什么10段的访问，只能访问333）</p>
-<p>我们容器发出的报文，网卡是 cal 网卡（calico的网卡名称），所以，容器只能访问333。</p>
-<h4 id="错误操作"><a href="#错误操作" class="headerlink" title="错误操作"></a>错误操作</h4><p>要把9999端口放开，意味着，我要添加开放9999端口到INPUT链路中，为了让iptables再重启后依然生效，我将规则，添加到</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/etc/sysconfig/iptables</span><br></pre></td></tr></table></figure>
-<p>在添加完成后其实并未生效，然后，有2种方式，用于让iptables生效：</p>
-<p>①：手动添加规则，比如 iptables -t filter -I INPUT 9 -s 172.20.0.0/14 -p tcp -m tcp –dport 9999 -j ACCEPT</p>
-<p>②：重启iptables（会自动加载 /etc/sysconfig/iptables内容 ）</p>
-<p>我选择了后者，之所以选择后者，其实是因为，即便重启了iptables，加载了刚刚的规则，原来的k8s和calico的iptables会丢失，但是，k8s会重建自己的整套iptables规则的。</p>
-<p>事实上，k8s确实也在我重启iptables后，重建了iptables，但问题来了。</p>
-<h4 id="引发的2个网络问题"><a href="#引发的2个网络问题" class="headerlink" title="引发的2个网络问题"></a>引发的2个网络问题</h4><p>1、我们线上的CI系统，是基于drone，做的二次开发，改动了很多的东西，添加了很多特性，结果上面一系列操作之后，我发现，我们的CI系统中，个别镜像的构建（Dockerfile中的RUN操作，有网络相关操作时，比如yum）会失败。</p>
-<p>2、线上的机器，执行 docker run，起来的容器，无法访问外网了。然而，k8s起来的pod里的容器，却可以访问外网。</p>
-<p>镜像的构建，其实本质上，也是起容器来做事情，而且，你无法定制docker build操作时，使用的网络模式，只能是bridge模式。而 docker run 起来的容器，默认也是 bridge 模式。结合上面2个内容，基本上可以确定，此问题，和k8s无关，而是纯粹的docker的问题了。</p>
-<h4 id="排查"><a href="#排查" class="headerlink" title="排查"></a>排查</h4><p>①：一开始以为是k8s的iptables重建不完整，所以，多次用线上的机器的机器 nodeA（无人访问的一台），不断尝试清空iptables，等待k8s重建iptables，多次尝试无效。</p>
-<p>②：stop docker -> stop kubelet -> clean iptables -> start docker -> start kubelet。这个操作的意义是，以为重启docker，重启k8s，docker 和 k8s 都会重建自己的 iptables。多次尝试无效。</p>
-<p>③：使用现在的k8s安装工具：kubespray，重新安装 nodeA，并添加到k8s集群内。寄希望于安装工具重装docker和k8s，结果依然无效。</p>
-<p>④：回归问题本身，问题一定出在iptables上。也是因为一开始重启了iptables导致此一系列问题。</p>
-<h4 id="解决过程"><a href="#解决过程" class="headerlink" title="解决过程"></a>解决过程</h4><p>既然问题出在iptables上，而我们要访问外网，那么，就得重iptables 报文转出入手。好在线上的机器，并没有都为了适配9999端口重启iptables，有3台 k8s 的 master 节点，并没有重启 iptables。</p>
-<p>然后，对比有问题机器、没有问题机器的 FORWARD、POSTROUTING 的规则。发现，缺少DOCKER相关的规则，这些规则，本来是安装docker之后，由docker创建的。那么，解决此问题，就需要重建docker的iptables。</p>
-<p>①：找一台干净的机器（只安装了docker，未启动容器，为安装k8s），然后从中提取docker相关的规则</p>
-<p>②：将提取的规则，与出问题的机器的iptables默认规则融合。</p>
-<p>③：执行 iptables-restore 恢复规则。</p>
-<h4 id="后续验证"><a href="#后续验证" class="headerlink" title="后续验证"></a>后续验证</h4><p>在问题机器上，docker run centos 容器，然后ping qq.com，链路畅通。有一个小问题，就是如果你先启动的容器执行 ping 外网操作。然后才再目的机器上执行 iptables-restore 的话，会发现，容器的 ping，有一个短暂的耗时，然后才会畅通，这是因为 iptables-restore 恢复规则后，有一个过程。</p>
-<h4 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h4><p>我整理一个相对标准的docker iptables规则备份，如果你也遇到了启动的docker容器，无法访问外网的问题，可以通过下面的内容，恢复规则</p>
-<p>将下面的规则，保存到一个文件，比如 docker-iptables-backup</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"># Generated by iptables-save v1<span class="number">.4</span><span class="number">.21</span> on Thu Apr <span class="number">30</span> <span class="number">20</span>:<span class="number">48</span>:<span class="number">42</span> <span class="number">2015</span></span><br><span class="line">*nat</span><br><span class="line">:PREROUTING ACCEPT [<span class="number">18</span>:<span class="number">1080</span>]</span><br><span class="line">:INPUT ACCEPT [<span class="number">18</span>:<span class="number">1080</span>]</span><br><span class="line">:OUTPUT ACCEPT [<span class="number">22</span>:<span class="number">1550</span>]</span><br><span class="line">:POSTROUTING ACCEPT [<span class="number">22</span>:<span class="number">1550</span>]</span><br><span class="line">:DOCKER - [<span class="number">0</span>:<span class="number">0</span>]</span><br><span class="line">-A PREROUTING -m addrtype --dst-type LOCAL -j DOCKER</span><br><span class="line">-A OUTPUT ! -d <span class="number">127.0</span><span class="number">.0</span><span class="number">.0</span>/<span class="number">8</span> -m addrtype --dst-type LOCAL -j DOCKER</span><br><span class="line">-A POSTROUTING -s <span class="number">172.17</span><span class="number">.0</span><span class="number">.0</span>/<span class="number">16</span> ! -o docker0 -j MASQUERADE</span><br><span class="line">-A POSTROUTING -s <span class="number">172.17</span><span class="number">.0</span><span class="number">.1</span>/<span class="number">32</span> -d <span class="number">172.17</span><span class="number">.0</span><span class="number">.1</span>/<span class="number">32</span> -p tcp -m tcp --dport <span class="number">80</span> -j MASQUERADE</span><br><span class="line">-A DOCKER ! -i docker0 -p tcp -m tcp --dport <span class="number">3001</span> -j DNAT --to-destination <span class="number">172.17</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">80</span></span><br><span class="line">COMMIT</span><br><span class="line"># Completed on Thu Apr <span class="number">30</span> <span class="number">20</span>:<span class="number">48</span>:<span class="number">42</span> <span class="number">2015</span></span><br><span class="line"># Generated by iptables-save v1<span class="number">.4</span><span class="number">.21</span> on Thu Apr <span class="number">30</span> <span class="number">20</span>:<span class="number">48</span>:<span class="number">42</span> <span class="number">2015</span></span><br><span class="line">*filter</span><br><span class="line">:INPUT ACCEPT [<span class="number">495</span>:<span class="number">53218</span>]</span><br><span class="line">:FORWARD ACCEPT [<span class="number">0</span>:<span class="number">0</span>]</span><br><span class="line">:OUTPUT ACCEPT [<span class="number">480</span>:<span class="number">89217</span>]</span><br><span class="line">:DOCKER - [<span class="number">0</span>:<span class="number">0</span>]</span><br><span class="line">-A FORWARD -o docker0 -j DOCKER</span><br><span class="line">-A FORWARD -o docker0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT</span><br><span class="line">-A FORWARD -i docker0 ! -o docker0 -j ACCEPT</span><br><span class="line">-A FORWARD -i docker0 -o docker0 -j ACCEPT</span><br><span class="line">-A DOCKER -d <span class="number">172.17</span><span class="number">.0</span><span class="number">.1</span>/<span class="number">32</span> ! -i docker0 -o docker0 -p tcp -m tcp --dport <span class="number">80</span> -j ACCEPT</span><br><span class="line">COMMIT</span><br><span class="line"># Completed on Thu Apr <span class="number">30</span> <span class="number">20</span>:<span class="number">48</span>:<span class="number">42</span> <span class="number">2015</span></span><br></pre></td></tr></table></figure>
-<p>然后，执行恢复 iptables-restore docker-iptables-backup</p>
-<p>注意：</p>
-<p>①：如果你的docker在k8s集群内部，理论上来说，上面的操作会有清空iptables的能力，但是你不需要担心，因为k8s会自行修复本身的iptables，也就是说，k8s会重建自己的iptables。但是假如你的k8s没能完整重建，就需要手动恢复k8s的iptables。如果是calico网络，只需要删除当前节点的calico pod即可，删除之后，k8s会重启这个pod，自然也就会重建iptables了。同理，flannel网络也是一样的。</p>
-<p>②：上面的规则，有一个关键，是 172.17.0.0 和 172.17.0.1，这是docker默认安装后的网段和docker0网卡的IP。如果你是默认安装的docker，上面的规则不需要改动，但如果你定制了docker0网卡的IP，记得修改一下上面的规则，适配你的环境。</p>
+        <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>我们都知道，基于Kubernetes的微服务，大行其道，传统部署模式一直都在跟着变化，但其实，在原有业务向服务化方向过度过程中，有些场景可能会变得复杂。  </p>
+<p>比如说：将Kubernetes的模式应用到开发环节上，这个环节需要频繁的变更代码，微服务的方式，可能就需要不断的：</p>
+<blockquote>
+<p>改代码-&gt;构建镜像-&gt;镜像推送-&gt;部署-&gt;拉去镜像-&gt;生成容器  </p>
+</blockquote>
+<p>尤其是PHP的业务，不需要构建二进制，仅需要发布代码，因此，如果按照上面的部署方式，就需要频繁改代码，走构建镜像这个流程，最后再做发布，这在开发环节就显得过于麻烦了，换而言之，有没有办法，能让开发直接将代码上传到容器中呢？  </p>
+<p>其实是有的，就是设计一个FTP中间件代理，让用户本地改完代码，通过FTP客户端（很多IDE是支持FTP的）直接上传到容器内部，甚至于用户保存一下代码就上传到容器内。  </p>
+<p>因此，这就引出了今天的主角，是我基于FTP协议+gRPC协议自研的FTP代理工具。  </p>
+<p>这个工具上线后，服务全公司所有研发，经过一段时间运行和修补，相对稳定，也做了一些关于内存方面的优化，直到又一次，在维护这个FTP代理的时候，发现一个奇怪的问题：  </p>
+<p>FTP代理进程，监听的是 192.168.88.32 的 21 端口，所以，这个端口对应了多少连接，就表示有多少个客户端存在，通过：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">netstat -apn |grep &quot;192.168.88.32:21&quot;</span><br></pre></td></tr></table></figure>
+<p>发现，有将近1000个链接，且都是 ESTABLISHED，ESTABLISHED 状态表示一个连接的状态是“已连接”，但我们研发团队，并没有那么多人，直觉上看，事出反常必有妖。</p>
+<h2 id="初步分析可能性"><a href="#初步分析可能性" class="headerlink" title="初步分析可能性"></a>初步分析可能性</h2><p>感觉可能有一种情况，就是每个人开了多个FTP客户端，实际场景下，研发同学组可能会使用3种类型的FTP客户端</p>
+<blockquote>
+<p>PHPStorm：这个客户端（SFTP插件）自己会维护一个FTP长连接。<br>Sublime + VsCode，这2个客户端不会维护链接，数据交互完成（比如传输任务），就主动发送 QUIT 指令到FTP代理端，然后所有链接关闭。很干净。</p>
+</blockquote>
+<p>另外，使用PHPStorm的话，也存在开多个IDE创建，就使用多个FTP客户端连接的情况。<br>为了继续排查，我把所有对 192.168.88.32:21 的链接，做了分组统计，看看哪个IP的连接数最多</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 注：61604 是 ftp代理的进程ID</span><br><span class="line">netstat -apn|grep &quot;61604/server&quot;|grep &apos;192.168.88.32:21&apos;|awk -F &apos;:&apos; &apos;&#123;print$2&#125;&apos;|awk &apos;&#123;print$2&#125;&apos;|sort|uniq -c |sort</span><br></pre></td></tr></table></figure>
+<p>上面的统计，是看哪个IP，对 192.168.88.32:21 连接数最多（18个）。  </p>
+<p>统计发现，很多IP，都存在多个链接的情况，难道每个人都用了多个IDE且可能还多IDE窗口使用吗？于是，挑了一个最多的，找到公司中使用这个IP的人，沟通发现，他确实使用了IDE多窗口，但是远远没有使用18个客户端那么多，仅仅PHPStorm开了3个窗口而已。</p>
+<p>初步排查结论：应该是FTP代理所在服务器的问题，和用户开多个客户端没有关系。</p>
+<h2 id="进一步排查"><a href="#进一步排查" class="headerlink" title="进一步排查"></a>进一步排查</h2><p>这次排查，是怀疑，这将近1000个的 ESTABLISHED 客户端链接中，有大量假的 ESTABLISHED 链接存在，之前的统计发现，实际上，对 192.168.88.32:21 的客户端链接进行筛选，得到的IP，一共才200个客户端IP而已，平均下来，每个人都有5个FTP客户端链接FTP代理，想象觉得不太可能。那么，如何排查 ESTABLISHED 假链接呢？</p>
+<p>在 TCP 四次挥手过程中，首先需要有一端，发起 FIN 包，接收方接受到 FIN 包之后，便开启四次挥手的过程，这也是连接断开的过程。  </p>
+<p>从之前的排查看，有人的IP，发起了多达18个FTP连接，那么，要排查是不是在 FTP 代理服务器上，存在假的 ESTABLISHED 连接的话，就首先需要去 开发同学的机器上看，客户端连接的端口，是不是仍在使用。比如：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tcp    ESTAB      0      0      192.168.88.32:21                 192.168.67.38:58038</span><br></pre></td></tr></table></figure>
+<p>这个表明，有一个研发的同学 IP是 192.168.67.38，使用了端口 58038，连接 192.168.88.32 上的 FTP 代理服务的 21 端口。所以，先要去看，到底研发同学的电脑上，这个端口存在不存在。  </p>
+<p>后来经过与研发同学沟通确认，研发电脑上并没有 58038 端口使用，这说明，对FTP代理服务的的客户端链接中显示的端口，也就是实际用户的客户端端口，存在大量不存在的情况。</p>
+<p>结论：FTP代理服务器上，存在的近1000个客户端连接中（ESTABLISHED状态），有大量的假连接存在。也就是说，实际上这个连接早就断开不存在了，但服务端却还显示存在。  </p>
+<h2 id="排查假-ESTABLISHED-连接"><a href="#排查假-ESTABLISHED-连接" class="headerlink" title="排查假 ESTABLISHED 连接"></a>排查假 ESTABLISHED 连接</h2><p>首先，如果出现假的 ESTABLISHED 连接，表示连接的客户端已经不存在了，客户端一方，要么发起了 TCP FIN 请求服务端没有收到，比如因为网络的各种原因（比如断网了）之后，FTP客户端无法发送FIN到服务端。要么服务端服务器接受到了 FIN，但是在后续过程中，丢包了等等。</p>
+<p>为了验证上面的问题，我本机进行了一次模拟，连接FTP服务端后，本机直接断网，断网后，杀死FTP客户端进程，等待5分钟（为什么等待5分钟后面说）后，重新联网。然后再 FTP 服务端，查看服务器上与 FTP代理进行连接的所有IP，然后发现我本机的IP和端口依然在列，然后再我本机，通过 </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">lsof -i :端口号</span><br></pre></td></tr></table></figure>
+<p>却没有任何记录，直接说明：服务端确实保持了假 ESTABLISHED 链接，一直不释放。</p>
+<p>上面提到，我等待5分钟，是因为，服务端的 keepalive，是这样的配置：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[root@xx xx]# sysctl -a |grep keepalive</span><br><span class="line">net.ipv4.tcp_keepalive_intvl = 75</span><br><span class="line">net.ipv4.tcp_keepalive_probes = 9</span><br><span class="line">net.ipv4.tcp_keepalive_time = 300</span><br></pre></td></tr></table></figure>
+<p>服务器默认设置的 tcp keepalive 检测是300秒后进行检测，也就是5分钟，当检测失败后，一共进行9次重试，每次时间间隔是75秒。<br>那么，问题就来了，服务器设置了 keepalive，如果 300 + 9*75 秒后，依然连接不上，就应该主动关闭假 ESTABLISHED 连接才对。为何还会积压呢？</p>
+<h3 id="猜想1：大量的积压的-ESTABLISHED-连接，实际上都还没有到释放时间"><a href="#猜想1：大量的积压的-ESTABLISHED-连接，实际上都还没有到释放时间" class="headerlink" title="猜想1：大量的积压的 ESTABLISHED 连接，实际上都还没有到释放时间"></a>猜想1：大量的积压的 ESTABLISHED 连接，实际上都还没有到释放时间</h3><p>为了验证这个问题，我们就需要具体的看某个连接，什么时候创建的。所以，我找到其中一个我确定是假的 ESTABLISHED的链接（那个IP的用户，把所有FTP客户端都关了，进程也杀死了），看此连接的创建时间，过程如下：</p>
+<p>先确定 FTP 代理进程的ID，为 61604</p>
+<p>然后，看看这个进程的所有连接，找到某个端口的（55360，就是一个客户端所使用的端口）</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[root@xxx xxx]# lsof -p 61604|grep 55360</span><br><span class="line">server  61604 root    6u     IPv4 336087732      0t0        TCP node088032:ftp-&gt;192.168.70.16:55360 (ESTABLISHED)</span><br></pre></td></tr></table></figure>
+<p>我们看到一个 “6u”，这个就是进程使用的这个连接的socket文件，Linux中，一切皆文件。我们看看这个文件的创建时间，就是这个连接的创建时间了</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ll /proc/61604/fd/6</span><br><span class="line">//输出：</span><br><span class="line">lrwx------. 1 root root 64 Nov  1 14:03 /proc/61604/fd/6 -&gt; socket:[336087732]</span><br></pre></td></tr></table></figure>
+<p>这个连接是11月1号创建的，现在已经11月8号，这个时间，早已经超出了 keepalive 探测 TCP连接是否存活的时间。这说明2个点：</p>
+<blockquote>
+<p>1、可能 Linux 的 KeepAlive 压根没生效。<br>2、可能我的 FTP 代理进程，压根没有使用 TCP KeepAlive</p>
+</blockquote>
+<h3 id="猜想2：-FTP-代理进程，压根没有使用-TCP-KeepAlive"><a href="#猜想2：-FTP-代理进程，压根没有使用-TCP-KeepAlive" class="headerlink" title="猜想2： FTP 代理进程，压根没有使用 TCP KeepAlive"></a>猜想2： FTP 代理进程，压根没有使用 TCP KeepAlive</h3><p>要验证这个结论，就得先知道，怎么看一个连接，到底具不具备 KeepAlive 功效？</p>
+<p>netstat 命令不好使（也可能我没找到方法），我们使用 ss 命令，查看 FTP进程下所有连接21端口的链接</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ss -aoen|grep 192.168.12.32:21|grep ESTAB</span><br></pre></td></tr></table></figure>
+<p>从众多结果中，随便筛选2个结果：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">tcp    ESTAB      0      0      192.168.12.32:21                 192.168.20.63:63677   ino:336879672 sk:65bb &lt;-&gt;</span><br><span class="line">tcp    ESTAB      0      0      192.168.12.32:21                 192.168.49.21:51896    ino:336960511 sk:67f7 &lt;-&gt;</span><br></pre></td></tr></table></figure>
+<p>我们再对比一下，所有连接服务器sshd进程的</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">tcp    ESTAB      0      0      192.168.12.32:333                192.168.53.207:63269               timer:(keepalive,59sec,0) ino:336462258 sk:6435 &lt;-&gt;</span><br><span class="line">tcp    ESTAB      0      0      192.168.12.32:333                192.168.55.185:64892               timer:(keepalive,3min59sec,0) ino:336461969 sk:62d1 &lt;-&gt;</span><br><span class="line">tcp    ESTAB      0      0      192.168.12.32:333                192.168.53.207:63220               timer:(keepalive,28sec,0) ino:336486442 sk:6329 &lt;-&gt;</span><br><span class="line">tcp    ESTAB      0      0      192.168.12.32:333                192.168.53.207:63771               timer:(keepalive,12sec,0) ino:336896561 sk:65de &lt;-&gt;</span><br></pre></td></tr></table></figure>
+<p>对比很容易发现，连接 21端口的所有连接，多没有 timer 项。这说明，FTP代理 进程监听 21 端口时，所有进来的链接，全都没有使用keepalive。</p>
+<p>找了一些文章，大多只是说，怎么配置Linux 的 Keep Alive，以及不配置的，会造成 ESTABLISHED 不释放问题，没有说进程需要额外设置啊？难道 Linux KeepAlive 配置，不是对所有连接直接就生效的？</p>
+<p>所以，我们有必要验证 Linux keepalive，必须要进程自己额外开启才能生效</p>
+<h2 id="验证-Linux-keepalive，必须要进程自己额外开启才能生效"><a href="#验证-Linux-keepalive，必须要进程自己额外开启才能生效" class="headerlink" title="验证 Linux keepalive，必须要进程自己额外开启才能生效"></a>验证 Linux keepalive，必须要进程自己额外开启才能生效</h2><p>在开始这个验证之前，先摘取一段FTP中间件代理关于监听 21 端口的部分代码：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">func (ftpServer *FTPServer) ListenAndServe() error &#123;</span><br><span class="line">    laddr, err := net.ResolveTCPAddr(&quot;tcp4&quot;, ftpServer.listenTo)</span><br><span class="line">    if err != nil &#123;</span><br><span class="line">        return err</span><br><span class="line">    &#125;</span><br><span class="line">    listener, err := net.ListenTCP(&quot;tcp4&quot;, laddr)</span><br><span class="line">    if err != nil &#123;</span><br><span class="line">        return err</span><br><span class="line">    &#125;</span><br><span class="line">    for &#123;</span><br><span class="line">        clientConn, err := listener.AcceptTCP()</span><br><span class="line">        if err != nil || clientConn == nil &#123;</span><br><span class="line">            ftpServer.logger.Print(&quot;listening error&quot;)</span><br><span class="line">            break</span><br><span class="line">        &#125;</span><br><span class="line">        //以闭包的方式整理处理driver和ftpBridge，协程结束整体由GC做资源释放</span><br><span class="line">        go func(c *net.TCPConn) &#123;</span><br><span class="line">            driver, err := ftpServer.driverFactory.NewDriver(ftpServer.FTPDriverType)</span><br><span class="line">            if err != nil &#123;</span><br><span class="line">                ftpServer.logger.Print(&quot;Error creating driver, aborting client connection：&quot; + err.Error())</span><br><span class="line">            &#125; else &#123;</span><br><span class="line">                ftpBridge := NewftpBridge(c, driver)</span><br><span class="line">                ftpBridge.Serve()</span><br><span class="line">            &#125;</span><br><span class="line">            c = nil</span><br><span class="line">        &#125;(clientConn)</span><br><span class="line">    &#125;</span><br><span class="line">    return nil</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>足够明显，整个函数，net.ListenTCP 附近都没有任何设置KeepAlive的相关操作。我们查看 相关函数，找到了设置 KeepAlive的地方，进行一下设置：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">if err != nil || clientConn == nil &#123;</span><br><span class="line">    ftpServer.logger.Print(&quot;listening error&quot;)</span><br><span class="line">    break</span><br><span class="line">&#125;</span><br><span class="line">// 此处，设置 keepalive</span><br><span class="line">clientConn.SetKeepAlive(true)</span><br></pre></td></tr></table></figure>
+<p>重新构建部署之后，可以看到，所有对21端口的连接，全部都带了 timer</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ss -aoen|grep 192.168.12.32:21|grep ESTAB</span><br></pre></td></tr></table></figure>
+<p>输出如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">tcp    ESTAB      0      0      192.168.12.32:21                 192.168.70.76:54888               timer:(keepalive,1min19sec,0) ino:397279721 sk:6b49 &lt;-&gt;</span><br><span class="line">tcp    ESTAB      0      0      192.168.12.32:21                 192.168.37.125:49648              timer:(keepalive,1min11sec,0) ino:398533882 sk:6b4a &lt;-&gt;</span><br><span class="line">tcp    ESTAB      0      0      192.168.12.32:21                 192.168.33.196:64471              timer:(keepalive,7.957ms,0) ino:397757143 sk:6b4c &lt;-&gt;</span><br><span class="line">tcp    ESTAB      0      0      192.168.12.32:21                 192.168.21.159:56630              timer:(keepalive,36sec,0) ino:396741646 sk:6b4d &lt;-&gt;</span><br></pre></td></tr></table></figure>
+<p>可以很明显看到，所有的连接，全部具备了 timer 功效，说明：想要使用 Linux 的 KeepAlive，需要程序单独做设置进行开启才行。</p>
+<h2 id="最后：ss-命令结果中-keepalive-的说明"><a href="#最后：ss-命令结果中-keepalive-的说明" class="headerlink" title="最后：ss 命令结果中 keepalive 的说明"></a>最后：ss 命令结果中 keepalive 的说明</h2><p>首先，看一下 Linux 中的配置，我的机器如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[root@xx xx]# sysctl -a |grep keepalive</span><br><span class="line">net.ipv4.tcp_keepalive_intvl = 75</span><br><span class="line">net.ipv4.tcp_keepalive_probes = 9</span><br><span class="line">net.ipv4.tcp_keepalive_time = 300</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>tcp_keepalive_time：表示多长时间后，开始检测TCP链接是否有效。<br>tcp_keepalive_probes：表示如果检测失败，会一直探测 9 次。<br>tcp_keepalive_intvl：承上，探测9次的时间间隔为 75 秒。</p>
+</blockquote>
+<p>然后，我们看一下 ss 命令的结果：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ss -aoen|grep 192.168.12.32:21|grep ESTAB</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tcp ESTAB  0  0  192.168.12.32:21 192.168.70.76:54888 timer:(keepalive,1min19sec,0) ino:397279721 sk:6b49 &lt;-&gt;</span><br></pre></td></tr></table></figure>
+<p>摘取这部分：timer:(keepalive,1min19sec,0) ，其中：</p>
+<p>keepalive：表示此链接具备 keepalive 功效。<br>1min19sec：表示剩余探测时间，这个时间每次看都会边，是一个递减的值，第一次探测，需要 net.ipv4.tcp_keepalive_time 这个时间倒计时，如果探测失败继续探测，后边会按照 net.ipv4.tcp_keepalive_intvl 这个时间值进行探测。直到探测成功。<br>0：这个值是探测时，检测到这是一个无效的TCP链接的话已经进行了的探测次数。</p>
 
       
     </div>
@@ -488,9 +515,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/docker/" rel="tag"># docker</a>
-          
-            <a href="/tags/drone/" rel="tag"># drone</a>
+            <a href="/tags/网络/" rel="tag"># 网络</a>
           
         </div>
       
@@ -503,8 +528,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2018/10/16/2/" rel="next" title="基于XFS文件系统的overlayfs下使用docker，为何要使用d_type=1">
-                <i class="fa fa-chevron-left"></i> 基于XFS文件系统的overlayfs下使用docker，为何要使用d_type=1
+              <a href="/2018/10/31/7/" rel="next" title="Kubernetes是如何对资源（CPU、内存等）做限制的">
+                <i class="fa fa-chevron-left"></i> Kubernetes是如何对资源（CPU、内存等）做限制的
               </a>
             
           </div>
@@ -512,10 +537,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2018/10/16/4/" rel="prev" title="如何解除github repo的 froked from xxx/yyy 提示">
-                如何解除github repo的 froked from xxx/yyy 提示 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -647,7 +668,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#引子"><span class="nav-number">1.</span> <span class="nav-text">引子</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#错误操作"><span class="nav-number">2.</span> <span class="nav-text">错误操作</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#引发的2个网络问题"><span class="nav-number">3.</span> <span class="nav-text">引发的2个网络问题</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#排查"><span class="nav-number">4.</span> <span class="nav-text">排查</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#解决过程"><span class="nav-number">5.</span> <span class="nav-text">解决过程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#后续验证"><span class="nav-number">6.</span> <span class="nav-text">后续验证</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#最后"><span class="nav-number">7.</span> <span class="nav-text">最后</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#初步分析可能性"><span class="nav-number">2.</span> <span class="nav-text">初步分析可能性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#进一步排查"><span class="nav-number">3.</span> <span class="nav-text">进一步排查</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#排查假-ESTABLISHED-连接"><span class="nav-number">4.</span> <span class="nav-text">排查假 ESTABLISHED 连接</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#猜想1：大量的积压的-ESTABLISHED-连接，实际上都还没有到释放时间"><span class="nav-number">4.1.</span> <span class="nav-text">猜想1：大量的积压的 ESTABLISHED 连接，实际上都还没有到释放时间</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#猜想2：-FTP-代理进程，压根没有使用-TCP-KeepAlive"><span class="nav-number">4.2.</span> <span class="nav-text">猜想2： FTP 代理进程，压根没有使用 TCP KeepAlive</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#验证-Linux-keepalive，必须要进程自己额外开启才能生效"><span class="nav-number">5.</span> <span class="nav-text">验证 Linux keepalive，必须要进程自己额外开启才能生效</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#最后：ss-命令结果中-keepalive-的说明"><span class="nav-number">6.</span> <span class="nav-text">最后：ss 命令结果中 keepalive 的说明</span></a></li></ol></div>
             
 
           </div>
