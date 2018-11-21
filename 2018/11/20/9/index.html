@@ -87,7 +87,7 @@
 <meta property="og:site_name" content="国南之境">
 <meta property="og:description" content="Kubernetes 中的 DNS本篇，是 CoreDNS 的前篇之一，后续会着重介绍 CoreDNS，但是步步深入讲 CoreDNS，讲一下 Kubernetes，以及 kubedns 有一定的必要，所以，就有了 CoreDNS 系列，本篇主要尽可能详尽的说明 Kubernetes 的DNS解析原理，以及 Kubernetes 集群中 DNS 解析目前存在的弊端和优化方式。 在 Kubernet">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2018-11-20T17:00:23.669Z">
+<meta property="og:updated_time" content="2018-11-21T15:02:08.022Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="CoreDNS系列1：Kubernetes内部域名解析原理、弊端及优化方式">
 <meta name="twitter:description" content="Kubernetes 中的 DNS本篇，是 CoreDNS 的前篇之一，后续会着重介绍 CoreDNS，但是步步深入讲 CoreDNS，讲一下 Kubernetes，以及 kubedns 有一定的必要，所以，就有了 CoreDNS 系列，本篇主要尽可能详尽的说明 Kubernetes 的DNS解析原理，以及 Kubernetes 集群中 DNS 解析目前存在的弊端和优化方式。 在 Kubernet">
@@ -490,7 +490,7 @@
 <p>表示空的DNS设置<br>这种方式一般用于想要自定义 DNS 配置的场景，而且，往往需要和 dnsConfig 配合一起使用达到自定义 DNS 的目的。</p>
 </blockquote>
 <h4 id="Default"><a href="#Default" class="headerlink" title="Default"></a>Default</h4><blockquote>
-<p>这种方式，相当于是让 kubelet 来决定使用何种 DNS 策略。有人说 Default 的方式，是使用宿主机的方式，这种说法并不准确。</p>
+<p>有人说 Default 的方式，是使用宿主机的方式，这种说法并不准确。<br>这种方式，其实是，让 kubelet 来决定使用何种 DNS 策略。而 kubelet 默认的方式，就是使用宿主机的 /etc/resolv.conf（可能这就是有人说使用宿主机的DNS策略的方式吧），但是，kubelet 是可以灵活来配置使用什么文件来进行DNS策略的，我们完全可以使用 kubelet 的参数：–resolv-conf=/etc/resolv.conf 来决定你的DNS解析文件地址。</p>
 </blockquote>
 <h4 id="ClusterFirst"><a href="#ClusterFirst" class="headerlink" title="ClusterFirst"></a>ClusterFirst</h4><blockquote>
 <p>这种方式，表示 POD 内的 DNS 使用集群中配置的 DNS 服务，简单来说，就是使用 Kubernetes 中 kubedns 或 coredns 服务进行域名解析。如果解析不成功，才会使用宿主机的 DNS 配置进行解析。</p>
