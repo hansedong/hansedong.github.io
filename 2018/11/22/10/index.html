@@ -87,12 +87,12 @@
 <meta property="og:site_name" content="国南之境">
 <meta property="og:description" content="KubeDNS简述KubeDNS，是K8S官方推荐的DNS解析组件之一，从 K8S 1.11 开始，K8S 已经使用 CoreDNS，替换 KubeDNS 来充当其 DNS 解析的重任。 KubeDNS的前身，是 skyDNS，这个组件，会把 DNS 的解析记录等数据，存储到 K8S 所使用的 etcd 集群中，我们这里不讨论这个，仅讨论现今的 KubeDNS，KubeDNS，并不把 DNS 的解">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="http://yoursite.com/2018/11/22/10/10-1.png">
-<meta property="og:updated_time" content="2018-11-24T08:05:58.064Z">
+<meta property="og:image" content="http://yoursite.com/2018/11/22/10/10-2.png">
+<meta property="og:updated_time" content="2018-11-26T02:32:04.160Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="CoreDNS系列2：KubeDNS 架构组成及实现原理">
 <meta name="twitter:description" content="KubeDNS简述KubeDNS，是K8S官方推荐的DNS解析组件之一，从 K8S 1.11 开始，K8S 已经使用 CoreDNS，替换 KubeDNS 来充当其 DNS 解析的重任。 KubeDNS的前身，是 skyDNS，这个组件，会把 DNS 的解析记录等数据，存储到 K8S 所使用的 etcd 集群中，我们这里不讨论这个，仅讨论现今的 KubeDNS，KubeDNS，并不把 DNS 的解">
-<meta name="twitter:image" content="http://yoursite.com/2018/11/22/10/10-1.png">
+<meta name="twitter:image" content="http://yoursite.com/2018/11/22/10/10-2.png">
 
 
 
@@ -448,7 +448,7 @@
 <li>KubeDNS 使用了3个容器，组合提供DNS服务。</li>
 </ol>
 <h2 id="KubeDNS组件构成及实现"><a href="#KubeDNS组件构成及实现" class="headerlink" title="KubeDNS组件构成及实现"></a>KubeDNS组件构成及实现</h2><p>KubeDNS，使用3个容器组合服务，分别是：dnsmasq、kube-dns、sidecar，这3者，职责不同，整个DNS架构组成如下：</p>
-<p><img src="/2018/11/22/10/10-1.png" alt="采样图"></p>
+<p><img src="/2018/11/22/10/10-2.png" alt="采样图"></p>
 <p>POD的DNS请求打到 dnsmasq 容器的53端口，dnsmasq 决定此请求时自己处理，还是转到 kubedns 容器处理。各组件具体职责：</p>
 <h3 id="dnsmasq-容器"><a href="#dnsmasq-容器" class="headerlink" title="dnsmasq 容器"></a>dnsmasq 容器</h3><p>dnsmasq 容器：负责整个 KubeDNS 的请求入口，53端口，就是它开放的，因此，在 K8S 中，内部域名和外部域名请求处理的区分，也是 dnsmasq 来做的。它充当 DNS 的请求入口，有几个作用：</p>
 <ol>
