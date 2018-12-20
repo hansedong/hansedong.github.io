@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="docker,linux,namespace,bridge,veth pair,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="总览Linux 的虚拟化技术之一，就是 Namespace，其中 Net Namespace 是网络命名空间，这个在 Docker 里用的比较多，这篇文章主要想做的是，如何模拟的一个跨 Namespace 的通信过程。 提一点：跨Namespace，可以是多个 Net Namespace 之间，也可以是 宿主机和某一个 Net Namespace。我们要模拟的是： ①：只有一个自定义的网络命名空间">
+<meta name="keywords" content="docker,linux,namespace,bridge,veth pair">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux 虚拟化之：Net Namespace 下的网络通信">
+<meta property="og:url" content="http://yoursite.com/2018/12/21/12/index.html">
+<meta property="og:site_name" content="国南之境">
+<meta property="og:description" content="总览Linux 的虚拟化技术之一，就是 Namespace，其中 Net Namespace 是网络命名空间，这个在 Docker 里用的比较多，这篇文章主要想做的是，如何模拟的一个跨 Namespace 的通信过程。 提一点：跨Namespace，可以是多个 Net Namespace 之间，也可以是 宿主机和某一个 Net Namespace。我们要模拟的是： ①：只有一个自定义的网络命名空间">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://yoursite.com/2018/12/21/12/12-1.png">
+<meta property="og:image" content="http://yoursite.com/2018/12/21/12/12-2.png">
+<meta property="og:updated_time" content="2018-12-20T14:54:19.941Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Linux 虚拟化之：Net Namespace 下的网络通信">
+<meta name="twitter:description" content="总览Linux 的虚拟化技术之一，就是 Namespace，其中 Net Namespace 是网络命名空间，这个在 Docker 里用的比较多，这篇文章主要想做的是，如何模拟的一个跨 Namespace 的通信过程。 提一点：跨Namespace，可以是多个 Net Namespace 之间，也可以是 宿主机和某一个 Net Namespace。我们要模拟的是： ①：只有一个自定义的网络命名空间">
+<meta name="twitter:image" content="http://yoursite.com/2018/12/21/12/12-1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/12/21/12/">
+
+
+
+
+
+  <title>Linux 虚拟化之：Net Namespace 下的网络通信 | 国南之境</title>
+  
+
+
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?74a7c642f7a0292e45cc64f132081563";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">国南之境</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/12/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="国南之境">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="国南之境">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Linux 虚拟化之：Net Namespace 下的网络通信</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-12-21T22:45:19+08:00">
+                2018-12-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/linux/" itemprop="url" rel="index">
+                    <span itemprop="name">linux</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/linux/namespace/" itemprop="url" rel="index">
+                    <span itemprop="name">namespace</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/linux/namespace/bridge/" itemprop="url" rel="index">
+                    <span itemprop="name">bridge</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/linux/namespace/bridge/veth-pair/" itemprop="url" rel="index">
+                    <span itemprop="name">veth pair</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/linux/namespace/bridge/veth-pair/docker/" itemprop="url" rel="index">
+                    <span itemprop="name">docker</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2018/12/21/12/" class="leancloud_visitors" data-flag-title="Linux 虚拟化之：Net Namespace 下的网络通信">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="总览"><a href="#总览" class="headerlink" title="总览"></a>总览</h2><p>Linux 的虚拟化技术之一，就是 Namespace，其中 Net Namespace 是网络命名空间，这个在 Docker 里用的比较多，这篇文章主要想做的是，如何模拟的一个跨 Namespace 的通信过程。</p>
+<p>提一点：跨Namespace，可以是多个 Net Namespace 之间，也可以是 宿主机和某一个 Net Namespace。我们要模拟的是：</p>
+<p>①：只有一个自定义的网络命名空间（名为 blue ）。<br>②：在宿主机网络和 blue 命名空间网络 两者上，分别建立虚拟网卡，并设置不同IP，进行通信（比如 ping，比如 curl）<br>③：尝试在名为 blue 的网络命名空间里启动 http 服务，在宿主机上网络上，访问 blue 空间里的这个 http 服务。</p>
+<p>所以，我们需要完成以下几个步骤：</p>
+<blockquote>
+<p>一、创建新命名空间<br>二、为新命名空间 blue ，添加网卡<br>三、打通宿主机命名空间和新命名空间之间的通信<br>四、在 blue 网络命名空间下，创建 http 服务，宿主机访问。</p>
+</blockquote>
+<h2 id="实施步骤"><a href="#实施步骤" class="headerlink" title="实施步骤"></a>实施步骤</h2><h3 id="创建名为-blue-的网络命名空间"><a href="#创建名为-blue-的网络命名空间" class="headerlink" title="创建名为 blue 的网络命名空间"></a>创建名为 blue 的网络命名空间</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip netns add blue</span><br></pre></td></tr></table></figure>
+<p>ip 工具集非常强大，即可处理网络命名空间，也可以处理网络设备。</p>
+<h3 id="为新命名空间，添加网卡"><a href="#为新命名空间，添加网卡" class="headerlink" title="为新命名空间，添加网卡"></a>为新命名空间，添加网卡</h3><h4 id="创建-veth-pair"><a href="#创建-veth-pair" class="headerlink" title="创建 veth pair"></a>创建 veth pair</h4><p>veth pair，主要就是用来处理不同命名空间通信用的（确切的说，是 Linux 虚拟化技术的产物之一，目前在容器化上用的比较多），veth 其实是 virtual ethernet 的缩写（虚拟以太网卡）。而 veth pair，就是一次性创建 一对 虚拟网卡，它们成对出现，向 veth pair 的一端发送的数据，经过操作系统内核后，可以通过另外一端读取到数据。</p>
+<p>veth pair 在不同的命名空间使用如下：</p>
+<p><img src="/2018/12/21/12/12-1.png" alt="vethpair"></p>
+<p>1、创建 veth pair</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip link add vethtest01 type veth peer name vethest002</span><br></pre></td></tr></table></figure>
+<p>2、查看 veth pair</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip link <span class="built_in">list</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 输出大概如下：</span></span><br><span class="line"><span class="number">18</span>: vethest002@vethtest01: &lt;BROADCAST,MULTICAST,M-DOWN&gt; mtu <span class="number">1500</span> qdisc noop state DOWN mode DEFAULT qlen <span class="number">1000</span></span><br><span class="line">    link/ether b2:<span class="number">13</span>:<span class="number">25</span>:<span class="number">45</span>:<span class="number">40</span>:<span class="number">89</span> brd ff:ff:ff:ff:ff:ff</span><br><span class="line"><span class="number">19</span>: vethtest01@vethest002: &lt;BROADCAST,MULTICAST,M-DOWN&gt; mtu <span class="number">1500</span> qdisc noop state DOWN mode DEFAULT qlen <span class="number">1000</span></span><br><span class="line">    link/ether a6:<span class="number">41</span>:<span class="number">82</span>:ca:<span class="number">4</span>c:fd brd ff:ff:ff:ff:ff:ff</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>注意：<br>1、ip link list 里，这个 link 指的就是网络设备，感觉叫 link 不太理解，可以通过 man ip 手册，找到 link 部分的说明。<br>2、其实我们通过 ifconfig 也可以看到，不过需要加 -a，即：ifconfig -a。ifconfig 默认只能看到已up的网络设备。</p>
+</blockquote>
+<h4 id="将-veh-pair-的一端，添加命名空间，并处理好网卡设置"><a href="#将-veh-pair-的一端，添加命名空间，并处理好网卡设置" class="headerlink" title="将 veh pair 的一端，添加命名空间，并处理好网卡设置"></a>将 veh pair 的一端，添加命名空间，并处理好网卡设置</h4><p>1、添加网卡到 blue 网络命名空间</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip link <span class="built_in">set</span> vethest002 netns blue</span><br></pre></td></tr></table></figure>
+<p>添加完成后，宿主机的环境中，已经无法通过 ip link list 看到 vethest002 这个网卡设备了，因为它已经到 blue 网络命名空间里去了。</p>
+<p>2、去到查看 blue 网络命名空间内，查看网卡设备列表：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip netns exec blue ip link <span class="built_in">list</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 输出：</span></span><br><span class="line"><span class="number">1</span>: lo: &lt;LOOPBACK&gt; mtu <span class="number">65536</span> qdisc noop state DOWN mode DEFAULT qlen <span class="number">1</span></span><br><span class="line">    link/loopback <span class="number">00</span>:<span class="number">00</span>:<span class="number">00</span>:<span class="number">00</span>:<span class="number">00</span>:<span class="number">00</span> brd <span class="number">00</span>:<span class="number">00</span>:<span class="number">00</span>:<span class="number">00</span>:<span class="number">00</span>:<span class="number">00</span></span><br><span class="line"><span class="number">18</span>: vethest002@if19: &lt;BROADCAST,MULTICAST&gt; mtu <span class="number">1500</span> qdisc noop state DOWN mode DEFAULT qlen <span class="number">1000</span></span><br><span class="line">    link/ether b2:<span class="number">13</span>:<span class="number">25</span>:<span class="number">45</span>:<span class="number">40</span>:<span class="number">89</span> brd ff:ff:ff:ff:ff:ff link-netnsid <span class="number">0</span></span><br></pre></td></tr></table></figure>
+<p>3、为 blue 里的网卡，配置网卡接口</p>
+<p>现在，blue 网络空间下，有 vethest002 设备，但这个设备第一，它没启动，第二，它没有设置网络IP信息，我们做一下这个处理：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip netns exec blue ifconfig vethest002 <span class="number">10.1</span><span class="number">.1</span><span class="number">.2</span>/<span class="number">16</span> up</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>注意：我这里设置的是 10.1.1.2/16，这里设置为16，而不是24，是因为，一会儿我要为宿主机网络的 veth pair 另一端 vethest001 设置另外一个网络段 10.1.2.2/16，这样，他俩才是在同一个网段。</p>
+</blockquote>
+<p>再次查看 blue 网络命名空间内的网卡接口：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip netns exec blue ifconfig</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">vethest002: flags=<span class="number">4163</span>&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu <span class="number">1500</span></span><br><span class="line">        inet <span class="number">10.1</span><span class="number">.1</span><span class="number">.2</span>  netmask <span class="number">255.255</span><span class="number">.0</span><span class="number">.0</span>  broadcast <span class="number">10.1</span><span class="number">.255</span><span class="number">.255</span></span><br><span class="line">        inet6 fe80::<span class="number">61</span>:ff:feb0:f65f  prefixlen <span class="number">64</span>  scopeid <span class="number">0x20</span>&lt;link&gt;</span><br><span class="line">        ether <span class="number">02</span>:<span class="number">61</span>:<span class="number">00</span>:b0:f6:<span class="number">5f</span>  txqueuelen <span class="number">1000</span>  (Ethernet)</span><br><span class="line">        RX packets <span class="number">25</span>  bytes <span class="number">1911</span> (<span class="number">1.8</span> KiB)</span><br><span class="line">        RX errors <span class="number">0</span>  dropped <span class="number">0</span>  overruns <span class="number">0</span>  frame <span class="number">0</span></span><br><span class="line">        TX packets <span class="number">25</span>  bytes <span class="number">1859</span> (<span class="number">1.8</span> KiB)</span><br><span class="line">        TX errors <span class="number">0</span>  dropped <span class="number">0</span> overruns <span class="number">0</span>  carrier <span class="number">0</span>  collisions <span class="number">0</span></span><br></pre></td></tr></table></figure>
+<p>通过上面的命令，可以看到，我们可以在某个命名空间内执行某个命令，比如添加网卡接口、查看网卡列表，都是通过 ip netns exec 来做的，所以，我们也可以在某个网络命名空间下开启一个 shell，此 shell 中执行的所有操作，都会在这个网络命名空间下。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 比如在某个命名空间下，开启一个 shell，去执行其他命令。</span></span><br><span class="line"><span class="comment">// 这个命令可以不执行，只是一个例子而已，但如果你执行了，记得退出来，否则你的网络操作都是在这里。</span></span><br><span class="line">ip netns exec blue /bin/bash</span><br></pre></td></tr></table></figure>
+<h3 id="打通宿主机命名空间和新命名空间之间的通信"><a href="#打通宿主机命名空间和新命名空间之间的通信" class="headerlink" title="打通宿主机命名空间和新命名空间之间的通信"></a>打通宿主机命名空间和新命名空间之间的通信</h3><h4 id="bridge-概述："><a href="#bridge-概述：" class="headerlink" title="bridge 概述："></a>bridge 概述：</h4><p>我们已经为新的网络命名空间 blue 做了配置，但现在这个命名空间无法连通宿主机的网络。</p>
+<p>我们需将通宿主机网络和 blue 网络命名的网络打通，就需要引入一个新的工具：bridge。</p>
+<p>①：bridge，是虚拟网络设备，可以为 bridge 配置网络设备的特征，比如：IP、MAC等。</p>
+<p>②：bridge 也是虚拟交换机，具备和物理交换机的类似功能。</p>
+<p>bridge的特殊性：普通网络设备，一般有2个端，发送端和接收端。比如网卡，从外网接收数据，转到内核，或者从内核接收数据，再转发出去。但是，bridge 不同，它可以有很多的端口，数据可以从任意的一端进来，至于进来之后，要从哪里出去，就和物理交换机差不多，看目的地址了，bridge 可以正确的进行路由。</p>
+<p>在开始配置 bridge 之前，我们可以看一下，在 K8S flannel（backend为overlay网络vxlan）这种网络模型下的 bridge 示例：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">[root@sja22 /]<span class="meta"># brctl show</span></span><br><span class="line">bridge name     bridge id               STP enabled     interfaces</span><br><span class="line">cni0            <span class="number">8000.0</span>a580ae94101       no              veth002d4c2b</span><br><span class="line">                                                        veth02267e47</span><br><span class="line">                                                        veth063995d0</span><br><span class="line">                                                        veth0ac99849</span><br><span class="line">                                                        veth0e651a57</span><br><span class="line">                                                        veth13d7ac2c</span><br><span class="line">                                                        veth141294eb</span><br><span class="line">                                                        veth196c3d37</span><br><span class="line">                                                        veth1be51bad</span><br><span class="line">                                                        veth1c17df21</span><br><span class="line">                                                        veth2036d552</span><br><span class="line">                                                        veth204659c2</span><br><span class="line">                                                        veth22261c72</span><br><span class="line">                                                        veth23ffa84b</span><br><span class="line">                                                        veth24b8dbe2</span><br><span class="line">                                                        veth2b24c23e</span><br><span class="line">                                                        veth2bebd32b</span><br><span class="line">docker_gwbridge         <span class="number">8000.02424</span>ebd5efe       no              veth550eff2</span><br></pre></td></tr></table></figure>
+<p>如上，可以看到，有一个名为 cni0 的 bridge，下面挂了一堆的 veth pair。</p>
+<p>用 bridge 打通不同网络命名空间的原来图（图是摘的），大致如下：</p>
+<p><img src="/2018/12/21/12/12-2.png" alt="vethpair"></p>
+<p>总得来说有几个关键点：</p>
+<p>①：得有一个网桥。<br>②：创建一对（或者多对）veth pair，取决于你想让几个 Namespace 网络进行通信。<br>③：veth pair 的一端，要接入 Namespace里，另外一端，接到 bridge 上。<br>④：为 Namespace 里的 veth pair 设备设置 IP ，并启动。<br>⑤：为 网桥配置 IP（这个 IP 必须和 Namespace 那头的 IP 在同一个网段），并启动。</p>
+<h4 id="创建-bridge-并连接-veth-pair-的一端"><a href="#创建-bridge-并连接-veth-pair-的一端" class="headerlink" title="创建 bridge 并连接 veth pair 的一端"></a>创建 bridge 并连接 veth pair 的一端</h4><p>1、创建一个 bridge（网桥）</p>
+<p>创建 bridge 有2种方式，用到的命令也不同，最基本的，就是 ip 命令</p>
+<p>方式1：ip 命令创建和操作 bridge</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip link add name test-bridge type bridge</span><br></pre></td></tr></table></figure>
+<p>这个命令执行后，无法通过 ifconfig 看到这个设备，因为这个设备没有启动，所以需要启动 bridge 设备：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip link <span class="built_in">set</span> test-bridge up</span><br></pre></td></tr></table></figure>
+<p>还是用的 ip link 操作，所以，其实 bridge 也是一个网络设备，和 veth pair 是同一个层级的东西。</p>
+<p>此命令执行后，可以通过 ifconfig 看到设备</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">[root@<span class="number">192</span><span class="number">-168</span><span class="number">-20</span><span class="number">-143</span> ~]<span class="meta"># ifconfig                  </span></span><br><span class="line"></span><br><span class="line">ens33: flags=<span class="number">4163</span>&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu <span class="number">1500</span></span><br><span class="line">        inet <span class="number">192.168</span><span class="number">.20</span><span class="number">.143</span>  netmask <span class="number">255.255</span><span class="number">.255</span><span class="number">.0</span>  broadcast <span class="number">192.168</span><span class="number">.20</span><span class="number">.255</span></span><br><span class="line">        inet6 fe80::<span class="number">4873</span>:<span class="number">514</span>:f637:<span class="number">51</span>d7  prefixlen <span class="number">64</span>  scopeid <span class="number">0x20</span>&lt;link&gt;</span><br><span class="line">        ether <span class="number">00</span>:<span class="number">0</span>c:<span class="number">29</span>:<span class="number">22</span>:<span class="number">41</span>:<span class="number">78</span>  txqueuelen <span class="number">1000</span>  (Ethernet)</span><br><span class="line">        RX packets <span class="number">4226</span>  bytes <span class="number">444256</span> (<span class="number">433.8</span> KiB)</span><br><span class="line">        RX errors <span class="number">0</span>  dropped <span class="number">0</span>  overruns <span class="number">0</span>  frame <span class="number">0</span></span><br><span class="line">        TX packets <span class="number">42796</span>  bytes <span class="number">3718608</span> (<span class="number">3.5</span> MiB)</span><br><span class="line">        TX errors <span class="number">0</span>  dropped <span class="number">0</span> overruns <span class="number">0</span>  carrier <span class="number">0</span>  collisions <span class="number">0</span></span><br><span class="line"></span><br><span class="line">lo: flags=<span class="number">73</span>&lt;UP,LOOPBACK,RUNNING&gt;  mtu <span class="number">65536</span></span><br><span class="line">        inet <span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>  netmask <span class="number">255.0</span><span class="number">.0</span><span class="number">.0</span></span><br><span class="line">        inet6 ::<span class="number">1</span>  prefixlen <span class="number">128</span>  scopeid <span class="number">0x10</span>&lt;host&gt;</span><br><span class="line">        loop  txqueuelen <span class="number">1</span>  (Local Loopback)</span><br><span class="line">        RX packets <span class="number">1869903</span>  bytes <span class="number">259940119</span> (<span class="number">247.8</span> MiB)</span><br><span class="line">        RX errors <span class="number">0</span>  dropped <span class="number">0</span>  overruns <span class="number">0</span>  frame <span class="number">0</span></span><br><span class="line">        TX packets <span class="number">1869903</span>  bytes <span class="number">259940119</span> (<span class="number">247.8</span> MiB)</span><br><span class="line">        TX errors <span class="number">0</span>  dropped <span class="number">0</span> overruns <span class="number">0</span>  carrier <span class="number">0</span>  collisions <span class="number">0</span></span><br><span class="line"></span><br><span class="line">test-bridge: flags=<span class="number">4163</span>&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu <span class="number">1500</span></span><br><span class="line">        inet6 fe80::d045:<span class="number">68f</span>f:fe56:<span class="number">5</span>a05  prefixlen <span class="number">64</span>  scopeid <span class="number">0x20</span>&lt;link&gt;</span><br><span class="line">        ether d2:<span class="number">45</span>:<span class="number">68</span>:<span class="number">56</span>:<span class="number">5</span>a:<span class="number">05</span>  txqueuelen <span class="number">1000</span>  (Ethernet)</span><br><span class="line">        RX packets <span class="number">0</span>  bytes <span class="number">0</span> (<span class="number">0.0</span> B)</span><br><span class="line">        RX errors <span class="number">0</span>  dropped <span class="number">0</span>  overruns <span class="number">0</span>  frame <span class="number">0</span></span><br><span class="line">        TX packets <span class="number">5</span>  bytes <span class="number">418</span> (<span class="number">418.0</span> B)</span><br><span class="line">        TX errors <span class="number">0</span>  dropped <span class="number">0</span> overruns <span class="number">0</span>  carrier <span class="number">0</span>  collisions <span class="number">0</span></span><br></pre></td></tr></table></figure>
+<p>方式2：brctl</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum -y install bridge-utils</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">brctl addbr test-bridge up</span><br></pre></td></tr></table></figure>
+<p>同样，上面的操作后，无法通过 ifconfig 看到此网桥设备，因为此设备还没有启动，还是需要手动启动</p>
+<blockquote>
+<p>注意：新创建的 bridge 除了一端连接了网络协议栈外，啥都没有，所以，我们需要将 bridge 和 veth pair 连接起来。</p>
+</blockquote>
+<p>2、将 bridge 和 veth pair 连接</p>
+<p>我们之前，已经将创建的 veth pair 的一端（vethest002），连接到 blue 网络命名空间内，并配置好 IP 了，宿主机上还有 veh pair 另外一端（vethest001），我们要把它接入刚才创建的网桥上。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip link <span class="built_in">set</span> dev vethtest01 master test-bridge</span><br></pre></td></tr></table></figure>
+<p>3、为网桥配置IP地址并做连通测试</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ifconfig test-bridge <span class="number">10.1</span><span class="number">.2</span><span class="number">.2</span>/<span class="number">16</span> up</span><br></pre></td></tr></table></figure>
+<p>经过上面的操作，其实我们已经可以连通这2个网络了。我们在宿主机网络，ping blue 命名空间的网络空间的 IP</p>
+<blockquote>
+<p>明确一点：宿主机网桥IP是 10.1.2.2，网络命名空间blue内的是 10.1.1.2</p>
+</blockquote>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[root@test ~]<span class="meta"># ping 10.1.1.2</span></span><br><span class="line">PING <span class="number">10.1</span><span class="number">.1</span><span class="number">.2</span> (<span class="number">10.1</span><span class="number">.1</span><span class="number">.2</span>) <span class="number">56</span>(<span class="number">84</span>) bytes of data.</span><br><span class="line"><span class="number">64</span> bytes from <span class="number">10.1</span><span class="number">.1</span><span class="number">.2</span>: icmp_seq=<span class="number">1</span> ttl=<span class="number">64</span> time=<span class="number">0.327</span> ms</span><br><span class="line"><span class="number">64</span> bytes from <span class="number">10.1</span><span class="number">.1</span><span class="number">.2</span>: icmp_seq=<span class="number">2</span> ttl=<span class="number">64</span> time=<span class="number">0.085</span> ms</span><br><span class="line"><span class="number">64</span> bytes from <span class="number">10.1</span><span class="number">.1</span><span class="number">.2</span>: icmp_seq=<span class="number">3</span> ttl=<span class="number">64</span> time=<span class="number">0.056</span> ms</span><br></pre></td></tr></table></figure>
+<p>如上，网络已经连通。</p>
+<h3 id="在-blue-网络命名空间下，创建-http-服务，宿主机访问"><a href="#在-blue-网络命名空间下，创建-http-服务，宿主机访问" class="headerlink" title="在 blue 网络命名空间下，创建 http 服务，宿主机访问"></a>在 blue 网络命名空间下，创建 http 服务，宿主机访问</h3><h4 id="先创建一个简单的HTTP服务"><a href="#先创建一个简单的HTTP服务" class="headerlink" title="先创建一个简单的HTTP服务"></a>先创建一个简单的HTTP服务</h4><p>我们直接编译一个非常简单的，基于 C 语言的 HTTP 服务就行，所以需要准备下</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum -y install gcc</span><br></pre></td></tr></table></figure>
+<p>1、创建 http_server.c 文件，写入如下内容：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;netinet/in.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;arpa/inet.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/socket.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;pthread.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdlib.h&gt;                                                                                                                                               </span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">startup</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> sock = socket(AF_INET,SOCK_STREAM,<span class="number">0</span>);</span><br><span class="line">    <span class="keyword">if</span>(sock &lt; <span class="number">0</span>)</span><br><span class="line">    &#123;   </span><br><span class="line">        <span class="built_in">exit</span>(<span class="number">1</span>);<span class="comment">//退出进程</span></span><br><span class="line">    &#125;   </span><br><span class="line"></span><br><span class="line">    <span class="keyword">int</span> opt = <span class="number">1</span>;</span><br><span class="line">    setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,&amp;opt,<span class="keyword">sizeof</span>(opt));</span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">sockaddr_in</span> <span class="title">local</span>;</span></span><br><span class="line">    local.sin_family = AF_INET;</span><br><span class="line">    local.sin_addr.s_addr = htonl(INADDR_ANY);</span><br><span class="line">    local.sin_port = htons(<span class="number">8080</span>); <span class="comment">// 指定固定端口</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">int</span> ret = bind(sock,(struct sockaddr *)&amp;local,<span class="keyword">sizeof</span>(local));</span><br><span class="line">    <span class="keyword">if</span>( ret &lt; <span class="number">0</span> ) </span><br><span class="line">    &#123;   </span><br><span class="line">        <span class="built_in">exit</span>(<span class="number">2</span>);</span><br><span class="line">    &#125;   </span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span>( listen(sock,<span class="number">5</span>) &lt; <span class="number">0</span> ) </span><br><span class="line">    &#123;   </span><br><span class="line">        <span class="built_in">exit</span>(<span class="number">3</span>);</span><br><span class="line">    &#125;   </span><br><span class="line">        <span class="keyword">return</span> sock;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span>* <span class="title">handler_request</span><span class="params">(<span class="keyword">void</span> * arg)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> sock = (<span class="keyword">int</span>)arg;</span><br><span class="line">    <span class="keyword">char</span> buf[<span class="number">4896</span>];</span><br><span class="line">    <span class="keyword">ssize_t</span> s = read(sock,buf,<span class="keyword">sizeof</span>(buf)<span class="number">-1</span>);</span><br><span class="line">    <span class="keyword">if</span>( s &gt; <span class="number">0</span> )</span><br><span class="line">    &#123;</span><br><span class="line">        buf[s] = <span class="number">0</span>;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">" %s "</span>,buf);</span><br><span class="line">        <span class="keyword">const</span> <span class="keyword">char</span> *echo_str = <span class="string">"HTTP/1.0 200 ok\n\n&lt;html&gt;&lt;h1&gt;Welcome to my http server!&lt;/h1&gt;&lt;html&gt;\n"</span>;</span><br><span class="line">        write(sock,echo_str,<span class="built_in">strlen</span>(echo_str));</span><br><span class="line">    &#125;</span><br><span class="line">    close(sock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> listen_sock = startup();</span><br><span class="line">    <span class="keyword">while</span>(<span class="number">1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">sockaddr_in</span> <span class="title">client</span>;</span></span><br><span class="line">        <span class="keyword">socklen_t</span> len = <span class="keyword">sizeof</span>(client);</span><br><span class="line">        <span class="keyword">int</span> sock = accept(listen_sock,(struct sockaddr*)&amp;client,&amp;len);</span><br><span class="line">        <span class="keyword">if</span>(sock &lt; <span class="number">0</span>)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">pthread_t</span> tid;</span><br><span class="line">        pthread_create(&amp;tid,<span class="literal">NULL</span>,handler_request,(<span class="keyword">void</span> *)sock);</span><br><span class="line">               pthread_detach(tid);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>2、创建 Makefile 文件，写入如下内容</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">.PHONY:all clean</span><br><span class="line">all:http_server</span><br><span class="line">http_server:http_server.c                                                                                                                                         </span><br><span class="line">        gcc $^ -o $@ -lpthread</span><br><span class="line">clean:</span><br><span class="line">        rm -rf http_server</span><br></pre></td></tr></table></figure>
+<p>编译出二进制文件</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make</span><br></pre></td></tr></table></figure>
+<p>可以看到，编译出一个可执行文件：http_server</p>
+<p>3、在 blue 网络命名空间下，启动这个 server</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ip netns exec blue /bin/bash</span><br><span class="line">./http_server</span><br></pre></td></tr></table></figure>
+<p>在这个网络下启动的这个 server 监听 8080 端口，也意味着，我们在宿主机，理论上可以通过 curl 访问这个服务。</p>
+<p>4、新开一个窗口，访问 blue 网络内的 8080 HTTP 服务</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[root@test ~]<span class="meta"># curl 10.1.1.2:8080</span></span><br><span class="line">&lt;html&gt;&lt;h1&gt;Welcome to my http server!&lt;/h1&gt;&lt;html&gt;</span><br></pre></td></tr></table></figure>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a href="https://blog.csdn.net/sld880311/article/details/77650937" target="_blank" rel="noopener">https://blog.csdn.net/sld880311/article/details/77650937</a></li>
+<li><a href="https://blog.csdn.net/qq_37941471/article/details/80789725" target="_blank" rel="noopener">https://blog.csdn.net/qq_37941471/article/details/80789725</a></li>
+<li><a href="https://segmentfault.com/a/1190000009491002" target="_blank" rel="noopener">https://segmentfault.com/a/1190000009491002</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>Donate comment here</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>打赏</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.png" alt="国南之境 微信支付">
+        <p>微信支付</p>
+      </div>
+    
+
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/docker/" rel="tag"># docker</a>
+          
+            <a href="/tags/linux/" rel="tag"># linux</a>
+          
+            <a href="/tags/namespace/" rel="tag"># namespace</a>
+          
+            <a href="/tags/bridge/" rel="tag"># bridge</a>
+          
+            <a href="/tags/veth-pair/" rel="tag"># veth pair</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/12/18/11/" rel="next" title="K8S 如何使用具有配额限制的 ceph 共享存储">
+                <i class="fa fa-chevron-left"></i> K8S 如何使用具有配额限制的 ceph 共享存储
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">国南之境</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">11</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                
+                  <span class="site-state-item-count">16</span>
+                  <span class="site-state-item-name">分类</span>
+                
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">14</span>
+                  <span class="site-state-item-name">标签</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#总览"><span class="nav-number">1.</span> <span class="nav-text">总览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#实施步骤"><span class="nav-number">2.</span> <span class="nav-text">实施步骤</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#创建名为-blue-的网络命名空间"><span class="nav-number">2.1.</span> <span class="nav-text">创建名为 blue 的网络命名空间</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#为新命名空间，添加网卡"><span class="nav-number">2.2.</span> <span class="nav-text">为新命名空间，添加网卡</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#创建-veth-pair"><span class="nav-number">2.2.1.</span> <span class="nav-text">创建 veth pair</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#将-veh-pair-的一端，添加命名空间，并处理好网卡设置"><span class="nav-number">2.2.2.</span> <span class="nav-text">将 veh pair 的一端，添加命名空间，并处理好网卡设置</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#打通宿主机命名空间和新命名空间之间的通信"><span class="nav-number">2.3.</span> <span class="nav-text">打通宿主机命名空间和新命名空间之间的通信</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#bridge-概述："><span class="nav-number">2.3.1.</span> <span class="nav-text">bridge 概述：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#创建-bridge-并连接-veth-pair-的一端"><span class="nav-number">2.3.2.</span> <span class="nav-text">创建 bridge 并连接 veth pair 的一端</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#在-blue-网络命名空间下，创建-http-服务，宿主机访问"><span class="nav-number">2.4.</span> <span class="nav-text">在 blue 网络命名空间下，创建 http 服务，宿主机访问</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#先创建一个简单的HTTP服务"><span class="nav-number">2.4.1.</span> <span class="nav-text">先创建一个简单的HTTP服务</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">3.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">国南之境</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://cdn.jsdelivr.net/npm/busuanzi@2.3.0/bsz.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("ui3Xsz1h0eom3WtwCf0d87Y6-gzGzoHsz", "WHVHSDeIgaLW1vEhsfWVw403");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
