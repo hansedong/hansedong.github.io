@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="istio,udp dropped,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="背景线上的K8S集群有一台节点，装了Istio的遥测组件，这个组件，之前在哪个节点哪个节点就出问题。出现的问题主要体现在几个点： ①：服务器间歇性 NodeNotReady②：服务器丢包极为严重③：服务器网络非常慢，以至于在服务器上执行 curl youku.com 都要响应很久。 Istio的遥测组件，是一个服务，由Istio的Ingress以及SideCar发送数据给遥测服务，而且发送的是UD">
+<meta name="keywords" content="istio,udp dropped">
+<meta property="og:type" content="article">
+<meta property="og:title" content="解决网卡丢包问题，以及丢包问题解决后系统网络还是慢的问题">
+<meta property="og:url" content="http://yoursite.com/2019/01/17/13/index.html">
+<meta property="og:site_name" content="国南之境">
+<meta property="og:description" content="背景线上的K8S集群有一台节点，装了Istio的遥测组件，这个组件，之前在哪个节点哪个节点就出问题。出现的问题主要体现在几个点： ①：服务器间歇性 NodeNotReady②：服务器丢包极为严重③：服务器网络非常慢，以至于在服务器上执行 curl youku.com 都要响应很久。 Istio的遥测组件，是一个服务，由Istio的Ingress以及SideCar发送数据给遥测服务，而且发送的是UD">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-01-17T15:45:47.971Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="解决网卡丢包问题，以及丢包问题解决后系统网络还是慢的问题">
+<meta name="twitter:description" content="背景线上的K8S集群有一台节点，装了Istio的遥测组件，这个组件，之前在哪个节点哪个节点就出问题。出现的问题主要体现在几个点： ①：服务器间歇性 NodeNotReady②：服务器丢包极为严重③：服务器网络非常慢，以至于在服务器上执行 curl youku.com 都要响应很久。 Istio的遥测组件，是一个服务，由Istio的Ingress以及SideCar发送数据给遥测服务，而且发送的是UD">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/01/17/13/">
+
+
+
+
+
+  <title>解决网卡丢包问题，以及丢包问题解决后系统网络还是慢的问题 | 国南之境</title>
+  
+
+
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?74a7c642f7a0292e45cc64f132081563";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">国南之境</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/01/17/13/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="国南之境">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="国南之境">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">解决网卡丢包问题，以及丢包问题解决后系统网络还是慢的问题</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-01-17T11:31:52+08:00">
+                2019-01-17
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/udp-dropped/" itemprop="url" rel="index">
+                    <span itemprop="name">udp dropped</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/udp-dropped/istio/" itemprop="url" rel="index">
+                    <span itemprop="name">istio</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2019/01/17/13/" class="leancloud_visitors" data-flag-title="解决网卡丢包问题，以及丢包问题解决后系统网络还是慢的问题">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h3><p>线上的K8S集群有一台节点，装了Istio的遥测组件，这个组件，之前在哪个节点哪个节点就出问题。出现的问题主要体现在几个点：</p>
+<p>①：服务器间歇性 NodeNotReady<br>②：服务器丢包极为严重<br>③：服务器网络非常慢，以至于在服务器上执行 curl youku.com 都要响应很久。</p>
+<p>Istio的遥测组件，是一个服务，由Istio的Ingress以及SideCar发送数据给遥测服务，而且发送的是UDP的包，量非常非常大，能达到 500Mbps。UDP包量大应该是导致了网卡丢包以及网络缓慢的主要问题，所以，要解决这个问题，就需要坐下Linux网卡收包层面的优化。开始优化前，需要先明确一下步骤：</p>
+<ul>
+<li>几个基本概念</li>
+<li>网卡相关的基础知识</li>
+<li>网卡收包问题排查</li>
+</ul>
+<h3 id="几个基本概念"><a href="#几个基本概念" class="headerlink" title="几个基本概念"></a>几个基本概念</h3><p>NIC：NIC 是 Network Interface Card，即网络接口卡，也就是网卡。</p>
+<p>IRQ：传统上，NIC会生成中断请求（IRQ），指示数据已到达。IRQ也是有多种的，有三种常见类型的IRQ：MSI-X，MSI和传统IRQ。</p>
+<h3 id="网卡相关的基础知识"><a href="#网卡相关的基础知识" class="headerlink" title="网卡相关的基础知识"></a>网卡相关的基础知识</h3><h4 id="网卡的队列数量"><a href="#网卡的队列数量" class="headerlink" title="网卡的队列数量"></a>网卡的队列数量</h4><p>查看和设置网卡使用的队列数量（注意，是队列的数量，不是队列本身的大小，仅针对收包）</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 小写 l 查看</span></span><br><span class="line">ethtool -l em2</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">Channel parameters <span class="keyword">for</span> em2:</span><br><span class="line">Pre-<span class="built_in">set</span> maximums:</span><br><span class="line">RX:             <span class="number">4</span></span><br><span class="line">TX:             <span class="number">4</span></span><br><span class="line">Other:          <span class="number">0</span></span><br><span class="line">Combined:       <span class="number">0</span></span><br><span class="line">Current hardware settings:</span><br><span class="line">RX:             <span class="number">4</span></span><br><span class="line">TX:             <span class="number">1</span></span><br><span class="line">Other:          <span class="number">0</span></span><br><span class="line">Combined:       <span class="number">0</span></span><br></pre></td></tr></table></figure>
+<p>从上面看，队列有几种：RX、TX、Combined 等。有些网卡，只支持 Combined 队列（发送和接收公用，这种叫做组合队列），有些可以单独设置 RX 和 TX 队列（RX 就是接收队列，TX 就是发送队列）。</p>
+<p>设置网卡队列的大小</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 大写 L 为设置</span></span><br><span class="line">ethtool -L eth0 rx <span class="number">8</span></span><br></pre></td></tr></table></figure>
+<p>注意：</p>
+<p>①：并非所有网卡都支持这个操作命令，这得看网卡驱动是否支持 ethtool get_channels 操作，一般支持这个操作的是物理网卡，虚拟网卡、虚拟网桥一般不支持。<br>②：设置队列操作，会导致网卡关闭后再次启动，所以和这个网卡相关的链接就会关闭。</p>
+<h4 id="网卡的队列大小"><a href="#网卡的队列大小" class="headerlink" title="网卡的队列大小"></a>网卡的队列大小</h4><p>查看和设置网卡的队列大小（注意是大小，不是数量）</p>
+<p>查看网卡队列大小</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 小写 g 为查看</span></span><br><span class="line">ethtool -g em2</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">Ring parameters <span class="keyword">for</span> em2:</span><br><span class="line">Pre-<span class="built_in">set</span> maximums:</span><br><span class="line">RX:             <span class="number">2047</span></span><br><span class="line">RX Mini:        <span class="number">0</span></span><br><span class="line">RX Jumbo:       <span class="number">0</span></span><br><span class="line">TX:             <span class="number">511</span></span><br><span class="line">Current hardware settings:</span><br><span class="line">RX:             <span class="number">200</span></span><br><span class="line">RX Mini:        <span class="number">0</span></span><br><span class="line">RX Jumbo:       <span class="number">0</span></span><br><span class="line">TX:             <span class="number">511</span></span><br></pre></td></tr></table></figure>
+<p>这个设置说明，网卡本身的队列大小，支持最高 2047，目前的设置是 200。</p>
+<p>设置网卡队列大小</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 大写 G 为设置</span></span><br><span class="line">ethtool -G eth0 rx <span class="number">4096</span></span><br></pre></td></tr></table></figure>
+<p>注意：</p>
+<p>①：并不是所有网卡都支持通过 ethtool 查看和修改网卡队列大小。<br>②：这个操作，同样会关闭和启动网卡，所以，和这个网卡相关的连接也会中断。</p>
+<h4 id="网卡的队列权重"><a href="#网卡的队列权重" class="headerlink" title="网卡的队列权重"></a>网卡的队列权重</h4><p>调整网卡队列的处理权重（仅针对收包）</p>
+<p>查看网卡队列的权重</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 小写 x 为查看</span></span><br><span class="line">ethtool -x em2</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">RX flow hash indirection table for em2 with 4 RX ring(s):</span><br><span class="line">    <span class="number">0</span>:      <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span>     <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span></span><br><span class="line">    <span class="number">8</span>:      <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span>     <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span></span><br><span class="line">   <span class="number">16</span>:      <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span>     <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span></span><br><span class="line">   <span class="number">24</span>:      <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span>     <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span></span><br><span class="line">   <span class="number">32</span>:      <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span>     <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span></span><br><span class="line">   <span class="number">40</span>:      <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span>     <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span></span><br><span class="line">   <span class="number">48</span>:      <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span>     <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span></span><br><span class="line">   <span class="number">56</span>:      <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span>     <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span></span><br><span class="line">   <span class="number">64</span>:      <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span>     <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span></span><br><span class="line">   <span class="number">72</span>:      <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span>     <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span></span><br><span class="line">   <span class="number">80</span>:      <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span>     <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span></span><br><span class="line">   <span class="number">88</span>:      <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span>     <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span></span><br><span class="line">   <span class="number">96</span>:      <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span>     <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span></span><br><span class="line">  <span class="number">104</span>:      <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span>     <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span></span><br><span class="line">  <span class="number">112</span>:      <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span>     <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span></span><br><span class="line">  <span class="number">120</span>:      <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span>     <span class="number">0</span>     <span class="number">1</span>     <span class="number">2</span>     <span class="number">3</span></span><br></pre></td></tr></table></figure>
+<p>说明：如上，有4个队列，队列编号是：0、1、2、3。散列值为2的数据，要发往2号队列，散列值为3的，要发往3号队列，散列值为8的，要发往0号队列。</p>
+<p>设置网卡队列权重</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 大写 X 为设置</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 设置权重均分，equal</span></span><br><span class="line">ethtool -X eth0 equal <span class="number">2</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 单独设置权重</span></span><br><span class="line"><span class="comment">// 下面这个操作，是为网卡的0号队列设置权重为6，网卡的1号队列设置权重为2。这样一来，队列0会处理更多的数据</span></span><br><span class="line">ethtool -X eth0 weight <span class="number">6</span> <span class="number">2</span></span><br></pre></td></tr></table></figure>
+<h4 id="针对网卡队列的网卡收包的哈希策略"><a href="#针对网卡队列的网卡收包的哈希策略" class="headerlink" title="针对网卡队列的网卡收包的哈希策略"></a>针对网卡队列的网卡收包的哈希策略</h4><p>调整网卡上收包（RX）过程用于哈希的字段（仅针对收包）</p>
+<p>首先，对数据包哈希的意义，是用于放入不同的队列。哈希可以选择数据包中的不同字段来哈希。</p>
+<p>查看用于哈希的字段：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 小写 n 查看</span></span><br><span class="line">ethtool -n eth0 rx-flow-hash udp4</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">UDP over IPV4 flows use these fields <span class="keyword">for</span> computing Hash flow key:</span><br><span class="line">IP SA</span><br><span class="line">IP DA</span><br></pre></td></tr></table></figure>
+<p>上面的输出说明，计算接受UDP包的哈希字段，是 IP地址的源地址和目的地址。</p>
+<p>配置用于哈希的字段：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 大写的 N 为设置</span></span><br><span class="line">ethtool -N eth0 rx-flow-hash udp4 sdfn</span><br></pre></td></tr></table></figure>
+<p>其中 sdfn 是一个字符串，可以通过 man ethtool 来查看。</p>
+<h4 id="网卡-RX的-ntuple-过滤功能（仅针对收包）"><a href="#网卡-RX的-ntuple-过滤功能（仅针对收包）" class="headerlink" title="网卡 RX的 ntuple 过滤功能（仅针对收包）"></a>网卡 RX的 ntuple 过滤功能（仅针对收包）</h4><p>有一些网卡，是支持“ntuple过滤”的功能。这个功能用于过滤硬件中的传入网络数据并将其排入特定的RX队列。这个可以做到很多过滤特性，比如：</p>
+<p>①：用户可以指定发往特定端口的TCP数据包应该发送到RX队列1。换句话说，让发往80端口的是数据包，指定到某个队列。<br>②：让发往某个端口的数据，由某个CPU处理。</p>
+<p>这个功能，有不同的叫法，比如说，Intel 的网卡管这个叫做 Internet Ethernet Flow Director。</p>
+<p>举一个此功能的使用场景：提供Web服务的响应效率，步骤如下：</p>
+<p>①：让80上运行的Web服务器固定在CPU 2上运行（也就是对进程的CPU绑定）。<br>②：RX队列（收包队列）的IRQ（请求中断）被分配为由CPU 2处理。也就是，让某个收包队列，由某个CPU处理。<br>③：发往端口80的TCP流量使用ntuple“过滤”到CPU 2。</p>
+<p>正题，查看网卡是否支持 ntuple 过滤：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 小写 k 查看</span></span><br><span class="line">ethtool -k eth1</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">Features <span class="keyword">for</span> eth1:</span><br><span class="line">rx-checksumming: off [fixed]</span><br><span class="line">tx-checksumming: on</span><br><span class="line">        tx-checksum-ipv4: off [fixed]</span><br><span class="line">        tx-checksum-ip-generic: on</span><br><span class="line">        tx-checksum-ipv6: off [fixed]</span><br><span class="line">        tx-checksum-fcoe-crc: off [fixed]</span><br><span class="line">        tx-checksum-sctp: off [fixed]</span><br><span class="line">scatter-gather: on</span><br><span class="line">        tx-scatter-gather: on</span><br><span class="line">        tx-scatter-gather-fraglist: off [fixed]</span><br><span class="line">tcp-segmentation-offload: on</span><br><span class="line">        tx-tcp-segmentation: on</span><br><span class="line">        tx-tcp-ecn-segmentation: off [fixed]</span><br><span class="line">        tx-tcp6-segmentation: on</span><br><span class="line">        tx-tcp-mangleid-segmentation: off</span><br><span class="line">....</span><br><span class="line">ntuple-filters: off [fixed]</span><br><span class="line">....</span><br><span class="line">hw-tc-offload: off [fixed]</span><br></pre></td></tr></table></figure>
+<p>如上，nutple-filters 为 off ，表示 ntuple 过滤功能没有开启。</p>
+<p>开启 nutple 过滤：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 大写 K 设置</span></span><br><span class="line">ethtool -K eth0 ntuple on</span><br></pre></td></tr></table></figure>
+<p>查看 ntuple 过滤规则：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 小写 u 查看规则</span></span><br><span class="line">ethtool -u eth0</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">40</span> RX rings available</span><br><span class="line">Total <span class="number">0</span> rules</span><br></pre></td></tr></table></figure>
+<p>如上，Total 0 rules 表示此设备没有 ntuple 过滤规则。</p>
+<p>添加 ntuple 过滤规则：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 大写 U 设置规则</span></span><br><span class="line"><span class="comment">// 添加 ntuple 过滤规则，让目标端口80的TCP流发送到RX队列2</span></span><br><span class="line">ethtool -U eth0 flow-type tcp4 dst-port <span class="number">80</span> action <span class="number">2</span></span><br></pre></td></tr></table></figure>
+<p>注意：可以使用ntuple过滤在硬件级别丢弃特定流的数据包。比如，丢弃特定IP地址的传入流量。</p>
+<h4 id="软中断（softirq）"><a href="#软中断（softirq）" class="headerlink" title="软中断（softirq）"></a>软中断（softirq）</h4><p>中断简介：</p>
+<p>中断：外部设备，需要通过中断机制（中断信号），来通知CPU处理响应的任务。这样CPU就响应中断信号对应的处理动作即可。避免CPU盲目等待某一个任务而无法处理其他任务的情况。中断是由外部设备引起的，计算机能够接受的外部信号，非常的有限，因为不可能为每一个外部的设备都定义好信号的格式，所以，计算机给外部信号，只约定了一种信号格式，这种信号就是中断信号，这套信号的接受和处理共同组成中断机制。</p>
+<p>计算机的中断，可以看做一个过程，它在看电视，然后水烧开了（中断信号），基于计算机去处理烧水的事情。但是计算机不具备连续性，处理完了烧水的事儿，就不知道怎么回到原来的过程再去看电视。计算机要完成上面的看似具备逻辑性的事情，就需要硬件+软件协同，实现处理中断的全部过程。</p>
+<p>中断需要尽可能的快，软中断（softirq）的意义就是，处理中断没有处理完的事情。</p>
+<p>举例来说：比如在网卡的驱动程序里，在中断环境里，只是把包放到一个队列里，然后由软中断来把包传递给进程，或者转发包等。</p>
+<p>Linux 里边的软中断不可重入，在一个CPU上，一次只能有一个软中断在执行。多个CPU的话，可以有多个软中断。</p>
+<p>查看当前机器的系统中断</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 第一步</span></span><br><span class="line">top</span><br><span class="line"><span class="comment">// 第二步</span></span><br><span class="line">按<span class="number">1</span> </span><br><span class="line"><span class="comment">// si 列，就是系统中断，si 就是 softirqs</span></span><br></pre></td></tr></table></figure>
+<p>查看软中断统计信息：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat /proc/softirqs</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">                    CPU0       CPU1       CPU2       CPU3</span><br><span class="line">          HI:          <span class="number">0</span>          <span class="number">0</span>          <span class="number">0</span>          <span class="number">0</span></span><br><span class="line">       TIMER: <span class="number">2831512516</span> <span class="number">1337085411</span> <span class="number">1103326083</span> <span class="number">1423923272</span></span><br><span class="line">      NET_TX:   <span class="number">15774435</span>     <span class="number">779806</span>     <span class="number">733217</span>     <span class="number">749512</span></span><br><span class="line">      NET_RX: <span class="number">1671622615</span> <span class="number">1257853535</span> <span class="number">2088429526</span> <span class="number">2674732223</span></span><br><span class="line">       BLOCK: <span class="number">1800253852</span>    <span class="number">1466177</span>    <span class="number">1791366</span>     <span class="number">634534</span></span><br><span class="line">BLOCK_IOPOLL:          <span class="number">0</span>          <span class="number">0</span>          <span class="number">0</span>          <span class="number">0</span></span><br><span class="line">     TASKLET:         <span class="number">25</span>          <span class="number">0</span>          <span class="number">0</span>          <span class="number">0</span></span><br><span class="line">       SCHED: <span class="number">2642378225</span> <span class="number">1711756029</span>  <span class="number">629040543</span>  <span class="number">682215771</span></span><br><span class="line">     HRTIMER:    <span class="number">2547911</span>    <span class="number">2046898</span>    <span class="number">1558136</span>    <span class="number">1521176</span></span><br><span class="line">         RCU: <span class="number">2056528783</span> <span class="number">4231862865</span> <span class="number">3545088730</span>  <span class="number">844379888</span></span><br></pre></td></tr></table></figure>
+<p>可以看到，不同的 CPU 处理关于网卡收包的软中断次数不一样（速度不一样），并不均匀，这说明有其他的因素，影响了这个速度。</p>
+<h4 id="IRQ-coalescing（中断合并）"><a href="#IRQ-coalescing（中断合并）" class="headerlink" title="IRQ coalescing（中断合并）"></a>IRQ coalescing（中断合并）</h4><p>这个东西，允许中断前缓存数据包，如果简单来说，一个包就会触发中断，那么它可以做到10个包触发一次中断，有效降低中断次数，提高系统响应效率。</p>
+<p>启用自适应RX / TX IRQ合并的结果是，当数据包速率较低时，将调整中断传送以改善延迟，并在数据包速率较高时提高吞吐量。</p>
+<p>查看网卡的中断合并是否已开启</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ethtool -c eth0</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">Coalesce parameters <span class="keyword">for</span> eth0:</span><br><span class="line">Adaptive RX: off  TX: off</span><br><span class="line">stats-block-usecs: <span class="number">0</span></span><br><span class="line">sample-interval: <span class="number">0</span></span><br><span class="line">pkt-rate-low: <span class="number">0</span></span><br><span class="line">pkt-rate-high: <span class="number">0</span></span><br><span class="line"></span><br><span class="line">rx-usecs: <span class="number">20</span></span><br><span class="line">rx-frames: <span class="number">5</span></span><br><span class="line">rx-usecs-irq: <span class="number">0</span></span><br><span class="line">rx-frames-irq: <span class="number">5</span></span><br><span class="line"></span><br><span class="line">tx-usecs: <span class="number">72</span></span><br><span class="line">tx-frames: <span class="number">53</span></span><br><span class="line">tx-usecs-irq: <span class="number">0</span></span><br><span class="line">tx-frames-irq: <span class="number">5</span></span><br><span class="line"></span><br><span class="line">rx-usecs-low: <span class="number">0</span></span><br><span class="line">rx-frame-low: <span class="number">0</span></span><br><span class="line">tx-usecs-low: <span class="number">0</span></span><br><span class="line">tx-frame-low: <span class="number">0</span></span><br><span class="line"></span><br><span class="line">rx-usecs-high: <span class="number">0</span></span><br><span class="line">rx-frame-high: <span class="number">0</span></span><br><span class="line">tx-usecs-high: <span class="number">0</span></span><br><span class="line">tx-frame-high: <span class="number">0</span></span><br></pre></td></tr></table></figure>
+<p>其中，Adaptive 显示了当前 RX 和 TX 是否开启了中断合并。</p>
+<p>设置中断合并</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ethtool -C eth0 adaptive-rx on</span><br></pre></td></tr></table></figure>
+<h4 id="IRQ（中断）的CPU亲和性"><a href="#IRQ（中断）的CPU亲和性" class="headerlink" title="IRQ（中断）的CPU亲和性"></a>IRQ（中断）的CPU亲和性</h4><p>对于支持多队列的网卡来说，可以尝试让特定的CPU来处理NIC生成的中断。通过设置特定的CPU，可以分割将用于处理哪些IRQ的CPU。</p>
+<p>不过，如果要调整IRQ亲和力，首先应该检查是否运行 irqbalance 守护程序。 这个守护进程尝试自动平衡IRQ到CPU，所以，在开启了 irqbalance 的情况下，它可能会覆盖你原有的设置。 如果正在运行 irqbalance，则应该禁用 irqbalance 或将 –banirq 与 IRQBALANCE_BANNED_CPUS 结合使用，或者，让 irqbalance 知道它不应该触及你想要自己分配的一组 IRQ 和 CPU 。</p>
+<p>查看是否开启了 irqbalance 服务</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">systemctl status irqbalance</span><br></pre></td></tr></table></figure>
+<p>如果没有开启，可以将其开启，开启后，网卡硬中断所绑定的CPU，将由 irqbalance 来自动调配。</p>
+<h4 id="netdev-max-backlog"><a href="#netdev-max-backlog" class="headerlink" title="netdev_max_backlog"></a>netdev_max_backlog</h4><p>inux 内核从网卡驱动中读取报文后可以缓存的报文数量，默认是 1000。积压在 backlog 的数据包，就是由软中断进行处理的。</p>
+<p>调整方式：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sysctl -w net.core.netdev_max_backlog=<span class="number">2000</span></span><br></pre></td></tr></table></figure>
+<p>注意：检查你网卡的驱动程序，如果它调用 netif_receive_skb 并且你没有使用 RPS，那么增加 netdev_max_backlog 将不会产生任何性能提升，因为没有数据会进入 input_pkt_queue。</p>
+<h4 id="套接字接收队列内存"><a href="#套接字接收队列内存" class="headerlink" title="套接字接收队列内存"></a>套接字接收队列内存</h4><p>可以通过下面的方式，调整 socket 接收队列的缓冲区大小</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 8388608 就是 8M 左右， 26214400 就是25M 左右</span></span><br><span class="line">sysctl -w net.core.rmem_max=<span class="number">8388608</span></span><br></pre></td></tr></table></figure>
+<p>sk_rcvbuf 从 net.core.rmem_default 值开始，所以，也可以通过设置sysctl来调整 net.core.rmem_default</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sysctl -w net.core.rmem_default=<span class="number">8388608</span></span><br></pre></td></tr></table></figure>
+<p>我们的应用程序，也可以调用 setsockopt 的时候，配置 SO_RCVBUF 来决定套接字接收队列的内存大小，不过，你最大能设置的值，无法超出 rmem_max （注意：这个说法不完全准确，因为可以通过调用 setsockopt 并传递 SO_RCVBUFFORCE 来覆盖net.core.rmem_max限制，但是，需要你具备 CAP_NET_ADMIN 的能力）</p>
+<h3 id="网卡收包排查"><a href="#网卡收包排查" class="headerlink" title="网卡收包排查"></a>网卡收包排查</h3><h4 id="先解决丢包问题"><a href="#先解决丢包问题" class="headerlink" title="先解决丢包问题"></a>先解决丢包问题</h4><p>要排查问题，说明已经存在问题，存在的问题比如，服务失败率变高（HTTP服务接口失败率高）->进而发现网卡流量太大->进而发现网卡丢包。</p>
+<p>先从丢包问题入手，因为有些场景下，解决丢包问题即是第一步，可能这个问题解决了，服务响应问题也就解决了。</p>
+<p>查看丢包问题</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ifconfig eth0</span><br></pre></td></tr></table></figure>
+<p>查看其中的 dropped 是否为0，以及是否递增。</p>
+<p>通过下面几种操作，往往可以解决丢包问题：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 增大socket缓冲区上限</span></span><br><span class="line">sysctl -w net.core.rmem_max=<span class="number">8388608</span></span><br><span class="line"><span class="comment">// 增大socket缓冲区默认大小</span></span><br><span class="line">sysctl -w net.core.rmem_default=<span class="number">8388608</span></span><br><span class="line"><span class="comment">// 调整 Linux 系统的网卡缓冲区大小</span></span><br><span class="line">sysctl -w net.core.netdev_max_backlog=<span class="number">2000</span></span><br></pre></td></tr></table></figure>
+<p>可以通过监控系统进行观测，或者ifconfig进行查看。</p>
+<p>虽然网卡不丢包了，系统还是慢，甚至一个 curl youku.com 都能明显感觉卡顿，这种情况，就需要进一步探究。</p>
+<h4 id="排查网卡软中断过高的问题"><a href="#排查网卡软中断过高的问题" class="headerlink" title="排查网卡软中断过高的问题"></a>排查网卡软中断过高的问题</h4><p>首先，网卡相关的事件，是会发生硬中断和软中断。</p>
+<p>①：硬中断，网卡收包就会触发。<br>②：软中断，网卡收包后，系统将其后续处理，比如发往进程，或者进行包转发等。</p>
+<p>软中断，一般是一个或者多个CPU来处理，现在很多网卡都是支持多队列网卡，这种情况，每一个队列都可能绑定一个CPU做中断处理。所以，我们先要确认一下，我们在使用的网卡，有几个队列，每个队列由哪个CPU在处理</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 查看网卡 RX 的队列数量</span></span><br><span class="line">ethtool -l em1</span><br><span class="line"></span><br><span class="line"><span class="comment">// 下面是输出，说明收包丢列（RX）有4个。</span></span><br><span class="line">Channel parameters <span class="keyword">for</span> em1:</span><br><span class="line">Pre-<span class="built_in">set</span> maximums:</span><br><span class="line">RX:             <span class="number">4</span></span><br><span class="line">TX:             <span class="number">4</span></span><br><span class="line">Other:          <span class="number">0</span></span><br><span class="line">Combined:       <span class="number">0</span></span><br><span class="line">Current hardware settings:</span><br><span class="line">RX:             <span class="number">4</span></span><br><span class="line">TX:             <span class="number">1</span></span><br><span class="line">Other:          <span class="number">0</span></span><br><span class="line">Combined:       <span class="number">0</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 查看系统中断统计</span></span><br><span class="line">cat /proc/interrupts</span><br></pre></td></tr></table></figure>
+<p>找到对应的网卡，比如 eth0 网卡对应的行（有可能多行，因为网卡可能使用的是多队列），找出来其中中断次数多的那一列对应的CPU，比如我找到的是：CPU9、CPU21、CPU58、CPU68</p>
+<p>然后，我们需要验证，是不是这几个CPU在处理中断，并且繁忙</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 执行 top 命令，然后按1，看一下 si 列的值，是不是被动较大，或者一直比较高</span></span><br><span class="line">top </span><br><span class="line"><span class="comment">// 基本上能看到，就是那几个CPU的si列，一直占用比较高</span></span><br></pre></td></tr></table></figure>
+<p>后续的处理，分2个方向：</p>
+<p>①：为硬中断绑定CPU<br>②：为软中断分散CPU压力</p>
+<h5 id="为硬中断绑定CPU（不推荐）"><a href="#为硬中断绑定CPU（不推荐）" class="headerlink" title="为硬中断绑定CPU（不推荐）"></a>为硬中断绑定CPU（不推荐）</h5><p>首先，这个操作，并不推荐。因为硬中断和软中断的目的不一样，上边说过了，我们可以先从修改软中断的修改看效果，如果Ok，那就没有必要做硬中断的修改了。最主要的是，修改硬中断，需要停止系统的某个服务，而修改软中断不需要。</p>
+<p>下面是修改硬中断的CPU绑定操作</p>
+<p>给网卡绑定CPU了，要么手动，要么自动，要么两者结合。之所以这么说，是因为，系统可能存在 irqbalance 服务，这个服务起来后，会自动处理中断和CPU的绑定关系。我们如果手动修改，比较麻烦，手动修改的值，会被 irqbalance 冲掉。所以，我们得关闭这个服务，才能</p>
+<p>好了，我们先执行手动操作，执行手动操作之前，先要知道，我们要操作谁。Linux 中，关于中断与CPU亲和性绑定关系的，在 proc/irq/ 目录。每一个子目录，都是一个 中断信号的编号。所以，我们要知道网卡中断对应的编号是什么，并进去修改。所以，第一步，我们如何知道网卡软中断的信号编号是什么</p>
+<p>首先，停止 irqbalance 服务</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">systemctl stop irqbalance</span><br></pre></td></tr></table></figure>
+<p>然后，查看网卡对应的中断信号</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 还是这个操作，看统计，找到网卡，最前面的那一列，就是中断信号！</span></span><br><span class="line">cat /proc/interrupts</span><br></pre></td></tr></table></figure>
+<p>比如，我们拿到的是 120、121、122、123 。</p>
+<p>然后，修改中断信号和CPU的绑定关系</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">echo <span class="number">9</span> &gt; /proc/irq/<span class="number">120</span>/smp_affinity_list</span><br><span class="line">echo <span class="number">10</span> &gt; /proc/irq/<span class="number">121</span>/smp_affinity_list</span><br><span class="line">echo <span class="number">11</span> &gt; /proc/irq/<span class="number">122</span>/smp_affinity_list</span><br><span class="line">echo <span class="number">12</span> &gt; /proc/irq/<span class="number">123</span>/smp_affinity_list</span><br></pre></td></tr></table></figure>
+<h5 id="为软中断分散CPU压力"><a href="#为软中断分散CPU压力" class="headerlink" title="为软中断分散CPU压力"></a>为软中断分散CPU压力</h5><p>修改硬中断其实并不够彻底，因为硬中的处理虽然分散到了上面几个核，但是硬中断之后，软中断才能开始工作，且，也在同一个核上，一个核即做硬中断处理，也做软中断处理，还是会大大降低硬中断和软中断的处理速度。</p>
+<p>通过设置 rps 以及 rfs ，可以将软中断，均匀分配到很多个CPU的核上。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 让em1每个队列的处理，均分到32个CPU核上。</span></span><br><span class="line">echo ffffffff &gt; /sys/<span class="class"><span class="keyword">class</span>/<span class="title">net</span>/<span class="title">em1</span>/<span class="title">queues</span>/<span class="title">rx</span>-0/<span class="title">rps_cpus</span></span></span><br><span class="line"><span class="class"><span class="title">echo</span> <span class="title">ffffffff</span> &gt; /<span class="title">sys</span>/<span class="title">class</span>/<span class="title">net</span>/<span class="title">em1</span>/<span class="title">queues</span>/<span class="title">rx</span>-1/<span class="title">rps_cpus</span></span></span><br><span class="line"><span class="class"><span class="title">echo</span> <span class="title">ffffffff</span> &gt; /<span class="title">sys</span>/<span class="title">class</span>/<span class="title">net</span>/<span class="title">em1</span>/<span class="title">queues</span>/<span class="title">rx</span>-2/<span class="title">rps_cpus</span></span></span><br><span class="line"><span class="class"><span class="title">echo</span> <span class="title">ffffffff</span> &gt; /<span class="title">sys</span>/<span class="title">class</span>/<span class="title">net</span>/<span class="title">em1</span>/<span class="title">queues</span>/<span class="title">rx</span>-3/<span class="title">rps_cpus</span></span></span><br></pre></td></tr></table></figure>
+<p>解释：</p>
+<p>①：为什么是8个f，一个f，是4个1，1111，8个f，就是32个1，就是代表32个核。<br>②：为什么是 rx-0 到 rx-4，因为上面说过了，这个网卡，有4个队列。<br>③：为什么不设置更多个核，是因为设置多了，系统会终止这个操作：“bash: echo: write error: Value too large for defined data type”说明：</p>
+<h3 id="收尾"><a href="#收尾" class="headerlink" title="收尾"></a>收尾</h3><p>经过上面的操作，网卡丢包问题基本解决，另外，系统网络缓慢问题也解决。</p>
+<p>上面的过程，也并非所有的内核参数都尝试做了调整，也有一些并没有调，总结来说，对 netdev_max_backlog 以及 rmem_max 的调整，可以有效的减少丢包。通过调节软中断并对其分散到多个CPU来减少CPU的中断压力，可以有效提高系统网络的RX效率。</p>
+<p>另外，前面提到，有些网卡支持 “中断合并” 特性，这个特定对于缓解中断压力有好处，并且默认情况下这个特性是关闭的，对这个服务器的网卡，设置 “中断合并” 操作，并没有生效，设置完成后也不报错，通过 ethtool -C eth0 也依然看到是 Off 状态。</p>
+<h3 id="文章参考"><a href="#文章参考" class="headerlink" title="文章参考"></a>文章参考</h3><ul>
+<li><a href="https://blog.packagecloud.io/eng/2016/06/22/monitoring-tuning-linux-networking-stack-receiving-data/#irqs" target="_blank" rel="noopener">https://blog.packagecloud.io/eng/2016/06/22/monitoring-tuning-linux-networking-stack-receiving-data/#irqs</a></li>
+<li><a href="http://ju.outofmemory.cn/entry/104879" target="_blank" rel="noopener">http://ju.outofmemory.cn/entry/104879</a></li>
+<li><a href="https://www.cnblogs.com/shenlinken/p/6657931.html?utm_source=itdadao&amp;utm_medium=referral" target="_blank" rel="noopener">https://www.cnblogs.com/shenlinken/p/6657931.html?utm_source=itdadao&amp;utm_medium=referral</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>Donate comment here</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>打赏</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.png" alt="国南之境 微信支付">
+        <p>微信支付</p>
+      </div>
+    
+
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/istio/" rel="tag"># istio</a>
+          
+            <a href="/tags/udp-dropped/" rel="tag"># udp dropped</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/12/21/12/" rel="next" title="Linux 虚拟化之：Net Namespace 下的网络通信">
+                <i class="fa fa-chevron-left"></i> Linux 虚拟化之：Net Namespace 下的网络通信
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">国南之境</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">12</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                
+                  <span class="site-state-item-count">20</span>
+                  <span class="site-state-item-name">分类</span>
+                
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">17</span>
+                  <span class="site-state-item-name">标签</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#几个基本概念"><span class="nav-number">2.</span> <span class="nav-text">几个基本概念</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#网卡相关的基础知识"><span class="nav-number">3.</span> <span class="nav-text">网卡相关的基础知识</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#网卡的队列数量"><span class="nav-number">3.1.</span> <span class="nav-text">网卡的队列数量</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#网卡的队列大小"><span class="nav-number">3.2.</span> <span class="nav-text">网卡的队列大小</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#网卡的队列权重"><span class="nav-number">3.3.</span> <span class="nav-text">网卡的队列权重</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#针对网卡队列的网卡收包的哈希策略"><span class="nav-number">3.4.</span> <span class="nav-text">针对网卡队列的网卡收包的哈希策略</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#网卡-RX的-ntuple-过滤功能（仅针对收包）"><span class="nav-number">3.5.</span> <span class="nav-text">网卡 RX的 ntuple 过滤功能（仅针对收包）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#软中断（softirq）"><span class="nav-number">3.6.</span> <span class="nav-text">软中断（softirq）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#IRQ-coalescing（中断合并）"><span class="nav-number">3.7.</span> <span class="nav-text">IRQ coalescing（中断合并）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#IRQ（中断）的CPU亲和性"><span class="nav-number">3.8.</span> <span class="nav-text">IRQ（中断）的CPU亲和性</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#netdev-max-backlog"><span class="nav-number">3.9.</span> <span class="nav-text">netdev_max_backlog</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#套接字接收队列内存"><span class="nav-number">3.10.</span> <span class="nav-text">套接字接收队列内存</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#网卡收包排查"><span class="nav-number">4.</span> <span class="nav-text">网卡收包排查</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#先解决丢包问题"><span class="nav-number">4.1.</span> <span class="nav-text">先解决丢包问题</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#排查网卡软中断过高的问题"><span class="nav-number">4.2.</span> <span class="nav-text">排查网卡软中断过高的问题</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#为硬中断绑定CPU（不推荐）"><span class="nav-number">4.2.1.</span> <span class="nav-text">为硬中断绑定CPU（不推荐）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#为软中断分散CPU压力"><span class="nav-number">4.2.2.</span> <span class="nav-text">为软中断分散CPU压力</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#收尾"><span class="nav-number">5.</span> <span class="nav-text">收尾</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#文章参考"><span class="nav-number">6.</span> <span class="nav-text">文章参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">国南之境</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://cdn.jsdelivr.net/npm/busuanzi@2.3.0/bsz.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("ui3Xsz1h0eom3WtwCf0d87Y6-gzGzoHsz", "WHVHSDeIgaLW1vEhsfWVw403");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
