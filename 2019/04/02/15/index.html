@@ -79,18 +79,18 @@
 
 
 
-<meta name="description" content="前言本文主要讲一讲栈这种非常基础的数据结构，以及其如何用Golang来实现的3种方式，简单用golang pprof做一个性能比对，以字符串括号匹配的一个例子来看其一个简单的应用场景。 栈的特性栈是一种FILO类型的数据结构，FILO 即 Fisrt In Last Out，也就是先进后出，也可以说是后进先出。它很像一个只有一个出口的站立的杯子，后边进入杯子的东西，会被最先取出来。 栈实现的三种方">
+<meta name="description" content="前言本文主要讲一讲栈这种非常基础的数据结构，以及其如何用Golang来实现的3种方式，简单用golang bench做一个性能比对，以字符串括号匹配的一个例子来看其一个简单的应用场景。 栈的特性栈是一种FILO类型的数据结构，FILO 即 Fisrt In Last Out，也就是先进后出，也可以说是后进先出。它很像一个只有一个出口的站立的杯子，后边进入杯子的东西，会被最先取出来。 栈实现的三种方">
 <meta name="keywords" content="golang,数据结构与算法">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Golang实现数据结构“栈”的三种实现，性能对比及应用示例">
 <meta property="og:url" content="http://yoursite.com/2019/04/02/15/index.html">
 <meta property="og:site_name" content="国南之境">
-<meta property="og:description" content="前言本文主要讲一讲栈这种非常基础的数据结构，以及其如何用Golang来实现的3种方式，简单用golang pprof做一个性能比对，以字符串括号匹配的一个例子来看其一个简单的应用场景。 栈的特性栈是一种FILO类型的数据结构，FILO 即 Fisrt In Last Out，也就是先进后出，也可以说是后进先出。它很像一个只有一个出口的站立的杯子，后边进入杯子的东西，会被最先取出来。 栈实现的三种方">
+<meta property="og:description" content="前言本文主要讲一讲栈这种非常基础的数据结构，以及其如何用Golang来实现的3种方式，简单用golang bench做一个性能比对，以字符串括号匹配的一个例子来看其一个简单的应用场景。 栈的特性栈是一种FILO类型的数据结构，FILO 即 Fisrt In Last Out，也就是先进后出，也可以说是后进先出。它很像一个只有一个出口的站立的杯子，后边进入杯子的东西，会被最先取出来。 栈实现的三种方">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2019-04-01T16:08:14.312Z">
+<meta property="og:updated_time" content="2019-04-01T16:17:24.676Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Golang实现数据结构“栈”的三种实现，性能对比及应用示例">
-<meta name="twitter:description" content="前言本文主要讲一讲栈这种非常基础的数据结构，以及其如何用Golang来实现的3种方式，简单用golang pprof做一个性能比对，以字符串括号匹配的一个例子来看其一个简单的应用场景。 栈的特性栈是一种FILO类型的数据结构，FILO 即 Fisrt In Last Out，也就是先进后出，也可以说是后进先出。它很像一个只有一个出口的站立的杯子，后边进入杯子的东西，会被最先取出来。 栈实现的三种方">
+<meta name="twitter:description" content="前言本文主要讲一讲栈这种非常基础的数据结构，以及其如何用Golang来实现的3种方式，简单用golang bench做一个性能比对，以字符串括号匹配的一个例子来看其一个简单的应用场景。 栈的特性栈是一种FILO类型的数据结构，FILO 即 Fisrt In Last Out，也就是先进后出，也可以说是后进先出。它很像一个只有一个出口的站立的杯子，后边进入杯子的东西，会被最先取出来。 栈实现的三种方">
 
 
 
@@ -411,7 +411,7 @@
       
 
       
-        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>本文主要讲一讲栈这种非常基础的数据结构，以及其如何用Golang来实现的3种方式，简单用golang pprof做一个性能比对，以字符串括号匹配的一个例子来看其一个简单的应用场景。</p>
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>本文主要讲一讲栈这种非常基础的数据结构，以及其如何用Golang来实现的3种方式，简单用golang bench做一个性能比对，以字符串括号匹配的一个例子来看其一个简单的应用场景。</p>
 <h3 id="栈的特性"><a href="#栈的特性" class="headerlink" title="栈的特性"></a>栈的特性</h3><p>栈是一种FILO类型的数据结构，FILO 即 Fisrt In Last Out，也就是先进后出，也可以说是后进先出。它很像一个只有一个出口的站立的杯子，后边进入杯子的东西，会被最先取出来。</p>
 <h3 id="栈实现的三种方式"><a href="#栈实现的三种方式" class="headerlink" title="栈实现的三种方式"></a>栈实现的三种方式</h3><p>首先，实现栈，远非只有这三种方式，这里，只是举例3种相对比较典型的方式。每一种实现方式都很简单，也没什么需要太费周章讲的必要。</p>
 <p>1、利用Golang的slice</p>
