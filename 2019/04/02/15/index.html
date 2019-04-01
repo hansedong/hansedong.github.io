@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="golang,数据结构与算法,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="前言本文主要讲一讲栈这种非常基础的数据结构，以及其如何用Golang来实现的3种方式，简单用golang pprof做一个性能比对，以字符串括号匹配的一个例子来看其一个简单的应用场景。 栈的特性栈是一种FILO类型的数据结构，FILO 即 Fisrt In Last Out，也就是先进后出，也可以说是后进先出。它很像一个只有一个出口的站立的杯子，后边进入杯子的东西，会被最先取出来。 栈实现的三种方">
+<meta name="keywords" content="golang,数据结构与算法">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Golang实现数据结构“栈”的三种实现，性能对比及应用示例">
+<meta property="og:url" content="http://yoursite.com/2019/04/02/15/index.html">
+<meta property="og:site_name" content="国南之境">
+<meta property="og:description" content="前言本文主要讲一讲栈这种非常基础的数据结构，以及其如何用Golang来实现的3种方式，简单用golang pprof做一个性能比对，以字符串括号匹配的一个例子来看其一个简单的应用场景。 栈的特性栈是一种FILO类型的数据结构，FILO 即 Fisrt In Last Out，也就是先进后出，也可以说是后进先出。它很像一个只有一个出口的站立的杯子，后边进入杯子的东西，会被最先取出来。 栈实现的三种方">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-04-01T16:08:14.312Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Golang实现数据结构“栈”的三种实现，性能对比及应用示例">
+<meta name="twitter:description" content="前言本文主要讲一讲栈这种非常基础的数据结构，以及其如何用Golang来实现的3种方式，简单用golang pprof做一个性能比对，以字符串括号匹配的一个例子来看其一个简单的应用场景。 栈的特性栈是一种FILO类型的数据结构，FILO 即 Fisrt In Last Out，也就是先进后出，也可以说是后进先出。它很像一个只有一个出口的站立的杯子，后边进入杯子的东西，会被最先取出来。 栈实现的三种方">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/04/02/15/">
+
+
+
+
+
+  <title>Golang实现数据结构“栈”的三种实现，性能对比及应用示例 | 国南之境</title>
+  
+
+
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?74a7c642f7a0292e45cc64f132081563";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">国南之境</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/04/02/15/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="国南之境">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="国南之境">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Golang实现数据结构“栈”的三种实现，性能对比及应用示例</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-04-02T00:03:53+08:00">
+                2019-04-02
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/golang/" itemprop="url" rel="index">
+                    <span itemprop="name">golang</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/golang/数据结构与算法/" itemprop="url" rel="index">
+                    <span itemprop="name">数据结构与算法</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2019/04/02/15/" class="leancloud_visitors" data-flag-title="Golang实现数据结构“栈”的三种实现，性能对比及应用示例">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>本文主要讲一讲栈这种非常基础的数据结构，以及其如何用Golang来实现的3种方式，简单用golang pprof做一个性能比对，以字符串括号匹配的一个例子来看其一个简单的应用场景。</p>
+<h3 id="栈的特性"><a href="#栈的特性" class="headerlink" title="栈的特性"></a>栈的特性</h3><p>栈是一种FILO类型的数据结构，FILO 即 Fisrt In Last Out，也就是先进后出，也可以说是后进先出。它很像一个只有一个出口的站立的杯子，后边进入杯子的东西，会被最先取出来。</p>
+<h3 id="栈实现的三种方式"><a href="#栈实现的三种方式" class="headerlink" title="栈实现的三种方式"></a>栈实现的三种方式</h3><p>首先，实现栈，远非只有这三种方式，这里，只是举例3种相对比较典型的方式。每一种实现方式都很简单，也没什么需要太费周章讲的必要。</p>
+<p>1、利用Golang的slice</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line">package main</span><br><span class="line"></span><br><span class="line">import (</span><br><span class="line">	<span class="string">"fmt"</span></span><br><span class="line">	<span class="string">"sync"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="comment">// Item the type of the stack</span></span><br><span class="line">type Item <span class="class"><span class="keyword">interface</span></span>&#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// ItemStack the stack of Items</span></span><br><span class="line">type ItemStack struct &#123;</span><br><span class="line">	items []Item</span><br><span class="line">	lock  sync.RWMutex</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// New creates a new ItemStack</span></span><br><span class="line">func NewStack() *ItemStack &#123;</span><br><span class="line">	s := &amp;ItemStack&#123;&#125;</span><br><span class="line">	s.items = []Item&#123;&#125;</span><br><span class="line">	<span class="keyword">return</span> s</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Pirnt prints all the elements</span></span><br><span class="line">func (s *ItemStack) <span class="keyword">Print</span>() &#123;</span><br><span class="line">	fmt.Println(s.items)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Push adds an Item to the top of the stack</span></span><br><span class="line">func (s *ItemStack) Push(t Item) &#123;</span><br><span class="line">	s.lock.Lock()</span><br><span class="line">	s.lock.Unlock()</span><br><span class="line">	s.items = append(s.items, t)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Pop removes an Item from the top of the stack</span></span><br><span class="line">func (s *ItemStack) Pop() Item &#123;</span><br><span class="line">	s.lock.Lock()</span><br><span class="line">	defer s.lock.Unlock()</span><br><span class="line">	<span class="keyword">if</span> len(s.items) == <span class="number">0</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> nil</span><br><span class="line">	&#125;</span><br><span class="line">	item := s.items[len(s.items)<span class="number">-1</span>]</span><br><span class="line">	s.items = s.items[<span class="number">0</span> : len(s.items)<span class="number">-1</span>]</span><br><span class="line">	<span class="keyword">return</span> item</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>此方式特点：</p>
+<ol>
+<li>利用Golang的Slice，足够简单。</li>
+<li>允许添加任意类型的元素。</li>
+<li>Push和Pop有加锁处理，线程安全。</li>
+<li>在一些文章里（Reddit）提到，使用slice作为Stack的底层支持，速度更快。但是，slice最大的问题其实是存在一个共用底层数组的的问题，哪怕你不断的Pop，但可能对于Golang来说，其占用的内存，并不一定减少。</li>
+</ol>
+<p>性能测试如下：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">package main</span><br><span class="line"></span><br><span class="line">import (</span><br><span class="line">	<span class="string">"testing"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> stack *ItemStack</span><br><span class="line"></span><br><span class="line">func init() &#123;</span><br><span class="line">	stack = NewStack()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func Benchmark_Push(b *testing.B) &#123;</span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123; <span class="comment">//use b.N for looping</span></span><br><span class="line">		stack.Push(<span class="string">"test"</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func Benchmark_Pop(b *testing.B) &#123;</span><br><span class="line">	b.StopTimer()</span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123; <span class="comment">//use b.N for looping</span></span><br><span class="line">		stack.Push(<span class="string">"test"</span>)</span><br><span class="line">	&#125;</span><br><span class="line">	b.StartTimer()</span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123; <span class="comment">//use b.N for looping</span></span><br><span class="line">		stack.Pop()</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">$ go test -test.bench=<span class="string">".*"</span> -benchmem -v</span><br><span class="line">goos: darwin</span><br><span class="line">goarch: amd64</span><br><span class="line">pkg: test/test8</span><br><span class="line">Benchmark_Push<span class="number">-4</span>   	<span class="number">10000000</span>	         <span class="number">222</span> ns/op	      <span class="number">94</span> B/op	       <span class="number">0</span> allocs/op</span><br><span class="line">Benchmark_Pop<span class="number">-4</span>    	<span class="number">20000000</span>	        <span class="number">65.0</span> ns/op	       <span class="number">0</span> B/op	       <span class="number">0</span> allocs/op</span><br><span class="line">PASS</span><br><span class="line">ok  	test/test8	<span class="number">7.644</span>s</span><br></pre></td></tr></table></figure>
+<p>2、利用Golang的container/list内置包</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line">package main</span><br><span class="line"></span><br><span class="line">import (</span><br><span class="line">	<span class="string">"container/list"</span></span><br><span class="line">	<span class="string">"sync"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">type Stack struct &#123;</span><br><span class="line">	<span class="keyword">list</span> *<span class="keyword">list</span>.<span class="keyword">List</span></span><br><span class="line">	lock *sync.RWMutex</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func NewStack() *Stack &#123;</span><br><span class="line">	<span class="keyword">list</span> := <span class="keyword">list</span>.<span class="keyword">New</span>()</span><br><span class="line">	l := &amp;sync.RWMutex&#123;&#125;</span><br><span class="line">	<span class="keyword">return</span> &amp;Stack&#123;<span class="keyword">list</span>, l&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (stack *Stack) Push(value <span class="class"><span class="keyword">interface</span></span>&#123;&#125;) &#123;</span><br><span class="line">	stack.lock.Lock()</span><br><span class="line">	defer stack.lock.Unlock()</span><br><span class="line">	stack.<span class="keyword">list</span>.PushBack(value)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (stack *Stack) Pop() <span class="class"><span class="keyword">interface</span></span>&#123;&#125; &#123;</span><br><span class="line">	stack.lock.Lock()</span><br><span class="line">	defer stack.lock.Unlock()</span><br><span class="line">	e := stack.<span class="keyword">list</span>.Back()</span><br><span class="line">	<span class="keyword">if</span> e != nil &#123;</span><br><span class="line">		stack.<span class="keyword">list</span>.Remove(e)</span><br><span class="line">		<span class="keyword">return</span> e.Value</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> nil</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (stack *Stack) Peak() <span class="class"><span class="keyword">interface</span></span>&#123;&#125; &#123;</span><br><span class="line">	e := stack.<span class="keyword">list</span>.Back()</span><br><span class="line">	<span class="keyword">if</span> e != nil &#123;</span><br><span class="line">		<span class="keyword">return</span> e.Value</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> nil</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (stack *Stack) Len() int &#123;</span><br><span class="line">	<span class="keyword">return</span> stack.<span class="keyword">list</span>.Len()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (stack *Stack) <span class="keyword">Empty</span>() bool &#123;</span><br><span class="line">	<span class="keyword">return</span> stack.<span class="keyword">list</span>.Len() == <span class="number">0</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>简单来说，container/list 是一个链表。用链表模拟栈，要么都向链表的最后做push和pop，要么都向链表的起点做push和pop，这种方法也非常简单。</p>
+<p>性能测试如下：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">$ go test -test.bench=<span class="string">".*"</span> -benchmem -v  -count=<span class="number">1</span></span><br><span class="line">goos: darwin</span><br><span class="line">goarch: amd64</span><br><span class="line">pkg: test/test10</span><br><span class="line">Benchmark_Push<span class="number">-4</span>   	 <span class="number">5000000</span>	       <span class="number">222</span> ns/op	      <span class="number">48</span> B/op	       <span class="number">1</span> allocs/op</span><br><span class="line">Benchmark_Pop<span class="number">-4</span>    	<span class="number">20000000</span>	        <span class="number">73.5</span> ns/op	       <span class="number">0</span> B/op	       <span class="number">0</span> allocs/op</span><br><span class="line">PASS</span><br><span class="line">ok  	test/test10	<span class="number">10.837</span>s</span><br></pre></td></tr></table></figure>
+<p>3、godoc的实现参考（自定义数据结构实现）</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line">package main</span><br><span class="line"></span><br><span class="line">import (</span><br><span class="line">	<span class="string">"sync"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">type (</span><br><span class="line">	Stack struct &#123;</span><br><span class="line">		top    *node</span><br><span class="line">		length int</span><br><span class="line">		lock   *sync.RWMutex</span><br><span class="line">	&#125;</span><br><span class="line">	node struct &#123;</span><br><span class="line">		value <span class="class"><span class="keyword">interface</span></span>&#123;&#125;</span><br><span class="line">		prev  *node</span><br><span class="line">	&#125;</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="comment">// Create a new stack</span></span><br><span class="line">func NewStack() *Stack &#123;</span><br><span class="line">	<span class="keyword">return</span> &amp;Stack&#123;nil, <span class="number">0</span>, &amp;sync.RWMutex&#123;&#125;&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Return the number of items in the stack</span></span><br><span class="line">func (this *Stack) Len() int &#123;</span><br><span class="line">	<span class="keyword">return</span> this.length</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// View the top item on the stack</span></span><br><span class="line">func (this *Stack) Peek() <span class="class"><span class="keyword">interface</span></span>&#123;&#125; &#123;</span><br><span class="line">	<span class="keyword">if</span> this.length == <span class="number">0</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> nil</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> this.top.value</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Pop the top item of the stack and return it</span></span><br><span class="line">func (this *Stack) Pop() <span class="class"><span class="keyword">interface</span></span>&#123;&#125; &#123;</span><br><span class="line">	this.lock.Lock()</span><br><span class="line">	defer this.lock.Unlock()</span><br><span class="line">	<span class="keyword">if</span> this.length == <span class="number">0</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> nil</span><br><span class="line">	&#125;</span><br><span class="line">	n := this.top</span><br><span class="line">	this.top = n.prev</span><br><span class="line">	this.length--</span><br><span class="line">	<span class="keyword">return</span> n.value</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Push a value onto the top of the stack</span></span><br><span class="line">func (this *Stack) Push(value <span class="class"><span class="keyword">interface</span></span>&#123;&#125;) &#123;</span><br><span class="line">	this.lock.Lock()</span><br><span class="line">	defer this.lock.Unlock()</span><br><span class="line">	n := &amp;node&#123;value, this.top&#125;</span><br><span class="line">	this.top = n</span><br><span class="line">	this.length++</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>此方式特点：</p>
+<ol>
+<li>实现比较精巧，唯一需要理解的地方就是 node 结构体中，prev 的部分，它指向的是前一个node成员。</li>
+<li>允许添加任意类型的元素。</li>
+<li>Push和Pop是线程安全的。</li>
+</ol>
+<p>性能测试如下：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">$ go test -test.bench=<span class="string">".*"</span> -benchmem -v</span><br><span class="line">goos: darwin</span><br><span class="line">goarch: amd64</span><br><span class="line">pkg: test/test9</span><br><span class="line">Benchmark_Push<span class="number">-4</span>   	<span class="number">10000000</span>	         <span class="number">178</span> ns/op	      <span class="number">32</span> B/op	       <span class="number">1</span> allocs/op</span><br><span class="line">Benchmark_Pop<span class="number">-4</span>    	<span class="number">20000000</span>	        <span class="number">75.5</span> ns/op	       <span class="number">0</span> B/op	       <span class="number">0</span> allocs/op</span><br><span class="line">PASS</span><br><span class="line">ok  	test/test9	<span class="number">9.776</span>s</span><br></pre></td></tr></table></figure>
+<h3 id="对比"><a href="#对比" class="headerlink" title="对比"></a>对比</h3><p>三种方式，总的来看，第三种基于自定义数据结构的实现方式，在push上效率最高，而且实现也比较精巧。个人其实是推荐使用这种方式的。其次，是基于 container/list 实现的方式。</p>
+<table>
+<thead>
+<tr>
+<th>特性对比</th>
+<th style="text-align:center">push速度</th>
+<th style="text-align:right">pop速度</th>
+<th style="text-align:center">push内存分配</th>
+<th style="text-align:right">pop内存分配</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>基于slice</td>
+<td style="text-align:center">222ns/op</td>
+<td style="text-align:right">65ns/op</td>
+<td style="text-align:center">94B/op</td>
+<td style="text-align:right">0B/op</td>
+</tr>
+<tr>
+<td>container/list链表</td>
+<td style="text-align:center">222ns/op</td>
+<td style="text-align:right">73.5ns/op</td>
+<td style="text-align:center">48B/op</td>
+<td style="text-align:right">0B/op</td>
+</tr>
+<tr>
+<td>自定义数据结构</td>
+<td style="text-align:center">178ns/op</td>
+<td style="text-align:right">75ns/op</td>
+<td style="text-align:center">32B/op</td>
+<td style="text-align:right">0B/op</td>
+</tr>
+</tbody>
+</table>
+<h3 id="栈数据结构的用途"><a href="#栈数据结构的用途" class="headerlink" title="栈数据结构的用途"></a>栈数据结构的用途</h3><p>栈这种数据结构通途很多。典型的应用，比如编辑器的撤销（undo）操作，以及校验字符匹配问题。下面主要举一个校验字符匹配的例子：</p>
+<p>题目：给定一个包含了右侧三种字符的字符串， ‘(‘, ‘)’, ‘{‘, ‘}’, ‘[‘ and ‘]’，判断字符串是否合法。合法的判断条件如下：</p>
+<ol>
+<li>必须使用相同类型的括号关闭左括号。</li>
+<li>必须以正确的顺序关闭打开括号。</li>
+</ol>
+<p>示例1：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Input: <span class="string">"()[]&#123;&#125;"</span></span><br><span class="line">Output: <span class="keyword">true</span></span><br></pre></td></tr></table></figure>
+<p>示例2：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Input: <span class="string">"([)]"</span></span><br><span class="line">Output: <span class="keyword">false</span></span><br></pre></td></tr></table></figure>
+<p>参考实现：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">func isValid(s string) bool &#123;</span><br><span class="line">    <span class="comment">// 括号对字典</span></span><br><span class="line">    bracketsMap := map[uint8]uint8&#123;<span class="string">'&#123;'</span>: <span class="string">'&#125;'</span>, <span class="string">'['</span>: <span class="string">']'</span>, <span class="string">'('</span>: <span class="string">')'</span>&#125;</span><br><span class="line">    <span class="comment">// 传入字符串为空则返回false（leetcode认为空字符串应该返回true，这里注意）</span></span><br><span class="line">    <span class="keyword">if</span> s == <span class="string">""</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 初始化栈</span></span><br><span class="line">    stack := NewStack()</span><br><span class="line">    <span class="keyword">for</span> i := <span class="number">0</span>; i &lt; len(s); i++ &#123;</span><br><span class="line">        <span class="comment">// 如果栈中有数据，则进行比对，如果栈顶元素和当前元素匹配，则弹出，其他情况向栈中压入元素</span></span><br><span class="line">        <span class="keyword">if</span> stack.Len() &gt; <span class="number">0</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> c, ok := bracketsMap[stack.Peek().(uint8)]; ok &amp;&amp; c == s[i] &#123;</span><br><span class="line">                stack.Pop()</span><br><span class="line">                <span class="keyword">continue</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        stack.Push(s[i])</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 到最后如果栈不为空，则说明未完全匹配掉（完全匹配的话，栈只能为空）</span></span><br><span class="line">    <span class="keyword">return</span> stack.Len() == <span class="number">0</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><ol>
+<li><a href="https://flaviocopes.com/golang-data-structure-stack/" target="_blank" rel="noopener">https://flaviocopes.com/golang-data-structure-stack/</a></li>
+<li><a href="https://github.com/hishboy/gocommons/tree/master/lang" target="_blank" rel="noopener">https://github.com/hishboy/gocommons/tree/master/lang</a></li>
+<li><a href="https://www.reddit.com/r/golang/comments/25aeof/building_a_stack_in_go_slices_vs_linked_list/" target="_blank" rel="noopener">https://www.reddit.com/r/golang/comments/25aeof/building_a_stack_in_go_slices_vs_linked_list/</a></li>
+</ol>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>Donate comment here</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>打赏</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.png" alt="国南之境 微信支付">
+        <p>微信支付</p>
+      </div>
+    
+
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/golang/" rel="tag"># golang</a>
+          
+            <a href="/tags/数据结构与算法/" rel="tag"># 数据结构与算法</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/03/19/14/" rel="next" title="">
+                <i class="fa fa-chevron-left"></i> 
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">国南之境</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">14</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                
+                  <span class="site-state-item-count">20</span>
+                  <span class="site-state-item-name">分类</span>
+                
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">18</span>
+                  <span class="site-state-item-name">标签</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#栈的特性"><span class="nav-number">2.</span> <span class="nav-text">栈的特性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#栈实现的三种方式"><span class="nav-number">3.</span> <span class="nav-text">栈实现的三种方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#对比"><span class="nav-number">4.</span> <span class="nav-text">对比</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#栈数据结构的用途"><span class="nav-number">5.</span> <span class="nav-text">栈数据结构的用途</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考"><span class="nav-number">6.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">国南之境</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://cdn.jsdelivr.net/npm/busuanzi@2.3.0/bsz.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("ui3Xsz1h0eom3WtwCf0d87Y6-gzGzoHsz", "WHVHSDeIgaLW1vEhsfWVw403");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -68,7 +68,7 @@
 
 
 
-  <meta name="keywords" content="docker,k8s,cni,ipvlan,macvlan,host-local,">
+  <meta name="keywords" content="Hexo, NexT">
 
 
 
@@ -80,17 +80,16 @@
 
 
 <meta name="description" content="CNI 和 IPAM 概述我们常说的CNI，可以包括IPAM（IP地址管理），也可以不包括IPAM。不过，通过情况下，CNI插件的实现和 IPAM插件的实现是分开为不同的可执⾏⽂件的。但是如果你写到⼀起，这样的CNI也可以⽤。按照K8S本⾝规 范，我们在使⽤CNI的时候，是要区分CNI和IPAM的。 K8S 启动 POD ⽹络的配置流程是，kubelet-&amp;gt;docker(pause)-&amp;gt">
-<meta name="keywords" content="docker,k8s,cni,ipvlan,macvlan,host-local">
 <meta property="og:type" content="article">
-<meta property="og:title" content="K8S CNI之：利⽤ ipvlan + host-local 打通容器与宿主机的平⾏⽹络">
+<meta property="og:title" content="国南之境">
 <meta property="og:url" content="http://yoursite.com/2019/03/19/14/index.html">
 <meta property="og:site_name" content="国南之境">
 <meta property="og:description" content="CNI 和 IPAM 概述我们常说的CNI，可以包括IPAM（IP地址管理），也可以不包括IPAM。不过，通过情况下，CNI插件的实现和 IPAM插件的实现是分开为不同的可执⾏⽂件的。但是如果你写到⼀起，这样的CNI也可以⽤。按照K8S本⾝规 范，我们在使⽤CNI的时候，是要区分CNI和IPAM的。 K8S 启动 POD ⽹络的配置流程是，kubelet-&amp;gt;docker(pause)-&amp;gt">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="http://yoursite.com/2019/03/19/14/14-1.png">
-<meta property="og:updated_time" content="2019-03-19T16:05:33.595Z">
+<meta property="og:updated_time" content="2019-03-20T16:16:09.965Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="K8S CNI之：利⽤ ipvlan + host-local 打通容器与宿主机的平⾏⽹络">
+<meta name="twitter:title" content="国南之境">
 <meta name="twitter:description" content="CNI 和 IPAM 概述我们常说的CNI，可以包括IPAM（IP地址管理），也可以不包括IPAM。不过，通过情况下，CNI插件的实现和 IPAM插件的实现是分开为不同的可执⾏⽂件的。但是如果你写到⼀起，这样的CNI也可以⽤。按照K8S本⾝规 范，我们在使⽤CNI的时候，是要区分CNI和IPAM的。 K8S 启动 POD ⽹络的配置流程是，kubelet-&amp;gt;docker(pause)-&amp;gt">
 <meta name="twitter:image" content="http://yoursite.com/2019/03/19/14/14-1.png">
 
@@ -128,7 +127,7 @@
 
 
 
-  <title>K8S CNI之：利⽤ ipvlan + host-local 打通容器与宿主机的平⾏⽹络 | 国南之境</title>
+  <title> | 国南之境</title>
   
 
 
@@ -314,7 +313,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">K8S CNI之：利⽤ ipvlan + host-local 打通容器与宿主机的平⾏⽹络</h1>
+          <h1 class="post-title" itemprop="name headline"></h1>
         
 
         <div class="post-meta">
@@ -326,7 +325,7 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-19T11:36:26+08:00">
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-19T23:32:04+08:00">
                 2019-03-19
               </time>
             
@@ -337,83 +336,6 @@
           </span>
 
           
-            <span class="post-category">
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
-                  <a href="/categories/k8s/" itemprop="url" rel="index">
-                    <span itemprop="name">k8s</span>
-                  </a>
-                </span>
-
-                
-                
-                  ， 
-                
-              
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
-                  <a href="/categories/k8s/cni/" itemprop="url" rel="index">
-                    <span itemprop="name">cni</span>
-                  </a>
-                </span>
-
-                
-                
-                  ， 
-                
-              
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
-                  <a href="/categories/k8s/cni/ipvlan/" itemprop="url" rel="index">
-                    <span itemprop="name">ipvlan</span>
-                  </a>
-                </span>
-
-                
-                
-                  ， 
-                
-              
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
-                  <a href="/categories/k8s/cni/ipvlan/macvlan/" itemprop="url" rel="index">
-                    <span itemprop="name">macvlan</span>
-                  </a>
-                </span>
-
-                
-                
-                  ， 
-                
-              
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
-                  <a href="/categories/k8s/cni/ipvlan/macvlan/host-local/" itemprop="url" rel="index">
-                    <span itemprop="name">host-local</span>
-                  </a>
-                </span>
-
-                
-                
-                  ， 
-                
-              
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
-                  <a href="/categories/k8s/cni/ipvlan/macvlan/host-local/docker/" itemprop="url" rel="index">
-                    <span itemprop="name">docker</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
 
           
             
@@ -421,7 +343,7 @@
 
           
           
-             <span id="/2019/03/19/14/" class="leancloud_visitors" data-flag-title="K8S CNI之：利⽤ ipvlan + host-local 打通容器与宿主机的平⾏⽹络">
+             <span id="/2019/03/19/14/" class="leancloud_visitors" data-flag-title="">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -461,7 +383,7 @@
 <p>K8S 启动 POD ⽹络的配置流程是，kubelet-&gt;docker(pause)-&gt;cni-&gt;ipam。因此，K8S⽹络的中⼼，便是 CNI 插 件和 IPAM 插件。因为 CNI 和 IPAM 插件很多，所以不打算都讲⼀讲。整体来说，CNI + IPAM 的实现可以分为2 类：</p>
 <p>①：第⼀类：与宿主机平⾏⽹络（2层⽹络或3层⽹络）<br>②：第⼆类：利⽤ SDN 技术的虚拟⽹络</p>
 <p>⽽第⼀类的 CNI ⽹络插件，主要是：bridge、macvlan、ipvlan、calico bgp、flannel host-gw 等。第⼆类的⽹络 插件主要有：flannel vxlan、calico ipip、weave 等。</p>
-<h2 id="CNI-和-IPAM-概述-1"><a href="#CNI-和-IPAM-概述-1" class="headerlink" title="CNI 和 IPAM 概述"></a>CNI 和 IPAM 概述</h2><p>⼤部分使⽤K8S的公司，都是使⽤的K8S经典⽹络模型，⽐如：K8S+Flannel（VXLAN）、K8S+Calico（IPIP） 等。这种模式下的⽹络有⼀个共同特点，就是容器⽹络在K8S集群内是隔离的，集群外的宿主机是⽆法直接访问容 器IP的。之所以会这样，是因为容器⽹络是虚拟的，它这个K8S的虚拟⽹络，⼤部分上都是借助 路由表 + iptables + 隧道 模式来做的。</p>
+<h2 id="虚拟SDN网络的优势和劣势"><a href="#虚拟SDN网络的优势和劣势" class="headerlink" title="虚拟SDN网络的优势和劣势"></a>虚拟SDN网络的优势和劣势</h2><p>⼤部分使⽤K8S的公司，都是使⽤的K8S经典⽹络模型，⽐如：K8S+Flannel（VXLAN）、K8S+Calico（IPIP） 等。这种模式下的⽹络有⼀个共同特点，就是容器⽹络在K8S集群内是隔离的，集群外的宿主机是⽆法直接访问容 器IP的。之所以会这样，是因为容器⽹络是虚拟的，它这个K8S的虚拟⽹络，⼤部分上都是借助 路由表 + iptables + 隧道 模式来做的。</p>
 <p>这种经典的⽹络模式，有优势，也有劣势。</p>
 <p>优势1：⽹络隔离。</p>
 <p>这种模式下，K8S集群内的节点的容器，是集群外宿主机节点⽆法访问的，所以，它能很好的起到隔离性的作⽤。 在有些公司这种模式⽐较好，⽐如：为多客户服务的公有云⼚商。另外，不同K8S的集群⽹络隔离，各个集群完全 可以使⽤同⼀个虚拟IP段，没有太多IP地址分配和管理的痛苦。</p>
@@ -586,22 +508,6 @@
 
     <footer class="post-footer">
       
-        <div class="post-tags">
-          
-            <a href="/tags/docker/" rel="tag"># docker</a>
-          
-            <a href="/tags/k8s/" rel="tag"># k8s</a>
-          
-            <a href="/tags/cni/" rel="tag"># cni</a>
-          
-            <a href="/tags/ipvlan/" rel="tag"># ipvlan</a>
-          
-            <a href="/tags/macvlan/" rel="tag"># macvlan</a>
-          
-            <a href="/tags/host-local/" rel="tag"># host-local</a>
-          
-        </div>
-      
 
       
       
@@ -620,6 +526,10 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/04/02/15/" rel="prev" title="Golang实现数据结构“栈”的三种实现，性能对比及应用示例">
+                Golang实现数据结构“栈”的三种实现，性能对比及应用示例 <i class="fa fa-chevron-right"></i>
+              </a>
             
           </div>
         </div>
@@ -696,7 +606,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">13</span>
+                  <span class="site-state-item-count">14</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -707,7 +617,7 @@
               
               <div class="site-state-item site-state-categories">
                 
-                  <span class="site-state-item-count">24</span>
+                  <span class="site-state-item-count">20</span>
                   <span class="site-state-item-name">分类</span>
                 
               </div>
@@ -718,7 +628,7 @@
               
               <div class="site-state-item site-state-tags">
                 
-                  <span class="site-state-item-count">21</span>
+                  <span class="site-state-item-count">18</span>
                   <span class="site-state-item-name">标签</span>
                 
               </div>
@@ -751,7 +661,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#CNI-和-IPAM-概述"><span class="nav-number">1.</span> <span class="nav-text">CNI 和 IPAM 概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CNI-和-IPAM-概述-1"><span class="nav-number">2.</span> <span class="nav-text">CNI 和 IPAM 概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#容器和宿主机平⾏⽹络打通通常会遇到的问题"><span class="nav-number">3.</span> <span class="nav-text">容器和宿主机平⾏⽹络打通通常会遇到的问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ipvlan和macvlan⽅案实施遇到的容器与宿主机互访问题"><span class="nav-number">4.</span> <span class="nav-text">ipvlan和macvlan⽅案实施遇到的容器与宿主机互访问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#使⽤-ptp-优雅的解决使⽤macvlan（或ipvlan）时容器和宿主机互访问题"><span class="nav-number">5.</span> <span class="nav-text">使⽤ ptp 优雅的解决使⽤macvlan（或ipvlan）时容器和宿主机互访问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#IPAM的使⽤"><span class="nav-number">6.</span> <span class="nav-text">IPAM的使⽤</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#CNI-和-IPAM-概述"><span class="nav-number">1.</span> <span class="nav-text">CNI 和 IPAM 概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#虚拟SDN网络的优势和劣势"><span class="nav-number">2.</span> <span class="nav-text">虚拟SDN网络的优势和劣势</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#容器和宿主机平⾏⽹络打通通常会遇到的问题"><span class="nav-number">3.</span> <span class="nav-text">容器和宿主机平⾏⽹络打通通常会遇到的问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ipvlan和macvlan⽅案实施遇到的容器与宿主机互访问题"><span class="nav-number">4.</span> <span class="nav-text">ipvlan和macvlan⽅案实施遇到的容器与宿主机互访问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#使⽤-ptp-优雅的解决使⽤macvlan（或ipvlan）时容器和宿主机互访问题"><span class="nav-number">5.</span> <span class="nav-text">使⽤ ptp 优雅的解决使⽤macvlan（或ipvlan）时容器和宿主机互访问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#IPAM的使⽤"><span class="nav-number">6.</span> <span class="nav-text">IPAM的使⽤</span></a></li></ol></div>
             
 
           </div>
