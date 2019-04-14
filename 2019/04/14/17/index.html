@@ -68,7 +68,7 @@
 
 
 
-  <meta name="keywords" content="kubernetes,ipvlan,容器与宿主机通信,">
+  <meta name="keywords" content="golang,">
 
 
 
@@ -79,20 +79,18 @@
 
 
 
-<meta name="description" content="CNI 和 IPAM 概述我们常说的CNI，可以包括IPAM（IP地址管理），也可以不包括IPAM。不过，通过情况下，CNI插件的实现和 IPAM插件的实现是分开为不同的可执⾏⽂件的。但是如果你写到⼀起，这样的CNI也可以⽤。按照K8S本⾝规 范，我们在使⽤CNI的时候，是要区分CNI和IPAM的。 K8S 启动 POD ⽹络的配置流程是，kubelet-&amp;gt;docker(pause)-&amp;gt">
-<meta name="keywords" content="kubernetes,ipvlan,容器与宿主机通信">
+<meta name="description" content="前言Golang的结构体标签可能每一个Gopher都在用，尤其是在json处理的地方用。比如： 123456type NetConf struct &amp;#123;    Master string `json:&quot;master&quot;`    Mode   string `json:&quot;mode&quot;`    MTU    int    `json:&quot;mtu&quot;`    Debug  bool   `json:&quot;d">
+<meta name="keywords" content="golang">
 <meta property="og:type" content="article">
-<meta property="og:title" content="K8S CNI之：利用ipvlan+host-local+ptp打通容器与宿主机的平行网络">
-<meta property="og:url" content="http://yoursite.com/2019/03/19/14/index.html">
+<meta property="og:title" content="聊一聊golang的结构体标签">
+<meta property="og:url" content="http://yoursite.com/2019/04/14/17/index.html">
 <meta property="og:site_name" content="国南之境">
-<meta property="og:description" content="CNI 和 IPAM 概述我们常说的CNI，可以包括IPAM（IP地址管理），也可以不包括IPAM。不过，通过情况下，CNI插件的实现和 IPAM插件的实现是分开为不同的可执⾏⽂件的。但是如果你写到⼀起，这样的CNI也可以⽤。按照K8S本⾝规 范，我们在使⽤CNI的时候，是要区分CNI和IPAM的。 K8S 启动 POD ⽹络的配置流程是，kubelet-&amp;gt;docker(pause)-&amp;gt">
+<meta property="og:description" content="前言Golang的结构体标签可能每一个Gopher都在用，尤其是在json处理的地方用。比如： 123456type NetConf struct &amp;#123;    Master string `json:&quot;master&quot;`    Mode   string `json:&quot;mode&quot;`    MTU    int    `json:&quot;mtu&quot;`    Debug  bool   `json:&quot;d">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="http://yoursite.com/2019/03/19/14/14-1.png">
-<meta property="og:updated_time" content="2019-04-01T16:33:14.108Z">
+<meta property="og:updated_time" content="2019-04-14T10:46:47.790Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="K8S CNI之：利用ipvlan+host-local+ptp打通容器与宿主机的平行网络">
-<meta name="twitter:description" content="CNI 和 IPAM 概述我们常说的CNI，可以包括IPAM（IP地址管理），也可以不包括IPAM。不过，通过情况下，CNI插件的实现和 IPAM插件的实现是分开为不同的可执⾏⽂件的。但是如果你写到⼀起，这样的CNI也可以⽤。按照K8S本⾝规 范，我们在使⽤CNI的时候，是要区分CNI和IPAM的。 K8S 启动 POD ⽹络的配置流程是，kubelet-&amp;gt;docker(pause)-&amp;gt">
-<meta name="twitter:image" content="http://yoursite.com/2019/03/19/14/14-1.png">
+<meta name="twitter:title" content="聊一聊golang的结构体标签">
+<meta name="twitter:description" content="前言Golang的结构体标签可能每一个Gopher都在用，尤其是在json处理的地方用。比如： 123456type NetConf struct &amp;#123;    Master string `json:&quot;master&quot;`    Mode   string `json:&quot;mode&quot;`    MTU    int    `json:&quot;mtu&quot;`    Debug  bool   `json:&quot;d">
 
 
 
@@ -122,13 +120,13 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2019/03/19/14/">
+  <link rel="canonical" href="http://yoursite.com/2019/04/14/17/">
 
 
 
 
 
-  <title>K8S CNI之：利用ipvlan+host-local+ptp打通容器与宿主机的平行网络 | 国南之境</title>
+  <title>聊一聊golang的结构体标签 | 国南之境</title>
   
 
 
@@ -297,7 +295,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/19/14/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/04/14/17/">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
       <meta itemprop="name" content="国南之境">
@@ -314,7 +312,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">K8S CNI之：利用ipvlan+host-local+ptp打通容器与宿主机的平行网络</h1>
+          <h1 class="post-title" itemprop="name headline">聊一聊golang的结构体标签</h1>
         
 
         <div class="post-meta">
@@ -326,8 +324,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-19T22:21:42+08:00">
-                2019-03-19
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-04-14T18:38:12+08:00">
+                2019-04-14
               </time>
             
 
@@ -349,8 +347,8 @@
               
               
                 <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
-                  <a href="/categories/kubernetes/" itemprop="url" rel="index">
-                    <span itemprop="name">kubernetes</span>
+                  <a href="/categories/golang/" itemprop="url" rel="index">
+                    <span itemprop="name">golang</span>
                   </a>
                 </span>
 
@@ -366,7 +364,7 @@
 
           
           
-             <span id="/2019/03/19/14/" class="leancloud_visitors" data-flag-title="K8S CNI之：利用ipvlan+host-local+ptp打通容器与宿主机的平行网络">
+             <span id="/2019/04/14/17/" class="leancloud_visitors" data-flag-title="聊一聊golang的结构体标签">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -402,96 +400,49 @@
       
 
       
-        <h2 id="CNI-和-IPAM-概述"><a href="#CNI-和-IPAM-概述" class="headerlink" title="CNI 和 IPAM 概述"></a>CNI 和 IPAM 概述</h2><p>我们常说的CNI，可以包括IPAM（IP地址管理），也可以不包括IPAM。不过，通过情况下，CNI插件的实现和 IPAM插件的实现是分开为不同的可执⾏⽂件的。但是如果你写到⼀起，这样的CNI也可以⽤。按照K8S本⾝规 范，我们在使⽤CNI的时候，是要区分CNI和IPAM的。</p>
-<p>K8S 启动 POD ⽹络的配置流程是，kubelet-&gt;docker(pause)-&gt;cni-&gt;ipam。因此，K8S⽹络的中⼼，便是 CNI 插 件和 IPAM 插件。因为 CNI 和 IPAM 插件很多，所以不打算都讲⼀讲。整体来说，CNI + IPAM 的实现可以分为2 类：</p>
-<p>①：第⼀类：与宿主机平⾏⽹络（2层⽹络或3层⽹络）<br>②：第⼆类：利⽤ SDN 技术的虚拟⽹络</p>
-<p>⽽第⼀类的 CNI ⽹络插件，主要是：bridge、macvlan、ipvlan、calico bgp、flannel host-gw 等。第⼆类的⽹络 插件主要有：flannel vxlan、calico ipip、weave 等。</p>
-<h2 id="虚拟SDN网络的优势和劣势"><a href="#虚拟SDN网络的优势和劣势" class="headerlink" title="虚拟SDN网络的优势和劣势"></a>虚拟SDN网络的优势和劣势</h2><p>⼤部分使⽤K8S的公司，都是使⽤的K8S经典⽹络模型，⽐如：K8S+Flannel（VXLAN）、K8S+Calico（IPIP） 等。这种模式下的⽹络有⼀个共同特点，就是容器⽹络在K8S集群内是隔离的，集群外的宿主机是⽆法直接访问容 器IP的。之所以会这样，是因为容器⽹络是虚拟的，它这个K8S的虚拟⽹络，⼤部分上都是借助 路由表 + iptables + 隧道 模式来做的。</p>
-<p>这种经典的⽹络模式，有优势，也有劣势。</p>
-<p>优势1：⽹络隔离。</p>
-<p>这种模式下，K8S集群内的节点的容器，是集群外宿主机节点⽆法访问的，所以，它能很好的起到隔离性的作⽤。 在有些公司这种模式⽐较好，⽐如：为多客户服务的公有云⼚商。另外，不同K8S的集群⽹络隔离，各个集群完全 可以使⽤同⼀个虚拟IP段，没有太多IP地址分配和管理的痛苦。</p>
-<p>优势2：部署⽅便。</p>
-<p>虽然这种⽅式很多公司会使⽤flannel vxlan模式的⽹络插件，或者calico ipip模式的⽹络插件，这2个插件的部署存 在⼀定复杂度，但是这种经典⽹络模式，有⾮常多的⼀键部署⼯具。⽐如：<a href="https://github.com/kubernetes-sigs/kubespray。" target="_blank" rel="noopener">https://github.com/kubernetes-sigs/kubespray。</a></p>
-<p>劣势1：⽹络隔离。</p>
-<p>⽹络隔离，既是优势，也是劣势。关键还是看公司的使⽤场景是什么。如果是公有云，就有⼀定优势，但如果是私 有云，⽐如⼀个公司做整个容器平台。后期遇到的痛点之⼀，就是⾮K8S集群的机器，如何访问K8S集群内容器的 IP地址。</p>
-<p>这⼀点可能很多⼈说不要直接访问容器IP就⾏了，但问题在于，业务的发展往往超过预期，搞K8S的部分，往往都 是基础架构部，或者系统部，但问题在于，这种部分，是⽀持部门，其职责之⼀，就是更好的⽀撑业务发展的多变 性。举个例⼦：如何让 Java 的服务，既可以部署到K8S集群内，还可以使⽤ Spring Cloud 或者 Dubbo+Zookeepr 这种服务发现架构？你可能会说，Java 的微服务要么⽤它们⾃⼰的体系，要么⽤ K8S 体系就⾏了，这就是⽀持部 分，⽀持的程度不够了。</p>
-<p>换句话说，⽹络隔离，对公司多技术语⾔和其语⾔⽣态的的发展，存在⼀定阻碍。</p>
-<p>劣势2：流量穿透的情况。</p>
-<p>K8S 内虽然是⽹络隔离的。但其隔离的并不彻底。它的隔离性，原来的是 kube-proxy 组件⽣成的⼤量 iptables 规 则和路由表来实现的。这种模式下，iptables 的动态变化，其实依赖 kube-proxy 这个组件，⽽这个组件，其实监 听的 K8S 集群的 service + endpoint 资源。我们部署在集群内的服务，访问某个内部服务，⽤的是基于 DNS 的服 务发现机制。这就带来了下⾯⼀个问题：</p>
-<p>如果服务A访问服务B，必先经过 DNS 解析拿到 service ip（⽐如 172.18.42.56） 这个虚拟 IP 地址。然⽽，如果 A 是拿着这个IP作为长连接服务，频繁对B发包。这个时候，B服务下掉了。下掉后，kube-proxy 组件，将从 iptables 中删除 B 服务的iptables 规则，也就是说，172.18.42.56 这个虚拟 IP 从 iptables 中删除了。此时，A 如果 还拿着这个 IP 发包，那么因为 集群内已经缺失了这个虚拟 IP 的记录，必然导致这部分流量，将穿越 iptables 规 则，发到上层的⽹关。如果这个流量⾮常⼤的话，将对⽹关路由器造成⾮常⼤的冲击。</p>
-<p>这个是切实存在的⼀个问题，也是我们之前遇到的⼀个问题。这个问题，你只能去⼿动修改iptables规则来处理。 因为 kube-proxy 也在修改 iptables 规则，所以，这个操作存在⼀定风险性，需要谨慎操作。</p>
-<p>劣势3：最重要的，⽹络的性能损耗严重。</p>
-<p>这个问题，要从2个⽅⾯看：</p>
-<p>①：基本上做 K8S 和 Docker 的同学都知道。flannel vxlan 和 calico ipip 模式 这种虚拟⽹络，在容器跨宿主机通 信时，存在包的封包和解包操作，性能损耗⼤。<br>②：K8S 内 有⼤量服务和容器的时候，iptables 会⾮常多，这对⽹络的性能损耗也是很⼤的。</p>
-<h2 id="容器和宿主机平⾏⽹络打通通常会遇到的问题"><a href="#容器和宿主机平⾏⽹络打通通常会遇到的问题" class="headerlink" title="容器和宿主机平⾏⽹络打通通常会遇到的问题"></a>容器和宿主机平⾏⽹络打通通常会遇到的问题</h2><p>基于上⾯的内容，很多⼈开始尝试将容器⽹络和公司所有物理机的⽹络打通，也就是形成⼀个平⾏⽹络体系。这个 体系，去除了封包和解包操作，也不再使⽤ kube-proxy 组件⽣成iptables规则。⽹络的性能⾮常⾼。</p>
-<p>打通平⾏⽹络的⽅案又很多，⽐如 Calico BGP、Linux Bridge、Linux Macvlan、Linux IPVlan 等等。</p>
-<p>这⼏个⽅案的特点如下：</p>
-<table>
-<thead>
-<tr>
-<th>⽅案/特点</th>
-<th>复杂度</th>
-<th>机房改造成本</th>
-<th>运维成本</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>calico bgp</td>
-<td>很⾼</td>
-<td>很⾼</td>
-<td>⾼</td>
-</tr>
-<tr>
-<td>linux Bridge</td>
-<td>低</td>
-<td>无</td>
-<td>低</td>
-</tr>
-<tr>
-<td>linux ipvlan</td>
-<td>很低</td>
-<td>无</td>
-<td>很低</td>
-</tr>
-<tr>
-<td>linux macvlan</td>
-<td>很低</td>
-<td>无</td>
-<td>很低</td>
-</tr>
-</tbody>
-</table>
-<p>总体来说：</p>
-<p>calico bgp 这种⽅案：实现成本⽐较⾼，需要整个公司的基础⽹络架构的物理设备（交换机或路由器）⽀持 BGP 协议才⾏。⽽且，⼀旦出现问题，排除的复杂度也⾼，需要公司的⼈很懂才⾏。我个人觉得，如果公司的研发和网络的掌控力没有达到一定程度的话，不建议采用这种方式。</p>
-<p>linux bridge：这种⽅案的成本较低，不过需要将物理⽹关挂到⽹桥下，如果是单⽹卡的物理机，这个操作会断 ⽹，建议多⽹卡环境进⾏操作。</p>
-<p>linux macvlan：这种⽅案成本很低，需要⽹卡⽀持混杂模式（⼤部分⽹卡都是⽀持的）。混杂模式需要⼿动开启。</p>
-<p>linux ipvlan：这种⽅案成本很低，和 Macvlan 很像。区别是不同 IP 公⽤ mac 地址，性能可能相对 macvlan 好⼀ 些，具体其优势不做细谈。</p>
-<p>打通容器和宿主机平⾏⽹络，其实也会存在⼀些问题，需要提前规划好。⽐如，是直接2层⽹络打通，还是3层⽹ 络打通？2层⽹络打通，可能既需要⼀个强⼒的交换机设备，也需要防⽌⼴播风暴产⽣。如果是3层⽹络打通，意 味着多⽹段，⽽多⽹段的情况，每新增⼀个IP段，宿主机都要进⾏⼀个路由表的处理操作，这倒也不是⼀个⿇烦的 问题。</p>
-<p>另外，macvlan、ipvlan 对操作系统的内核版本都有⼀定的要求。内核版本⽀持不好的情况下，会遇到各种各样的 异常问题，不好排查。⽐如 macvlan 在 Linux 4.20.0 这个内核版本上，就有很多问题，⽐如：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kernel:unregister_netdevice: waiting for eth0 to become free. Usage count = 1</span><br></pre></td></tr></table></figure>
-<h2 id="ipvlan和macvlan⽅案实施遇到的容器与宿主机互访问题"><a href="#ipvlan和macvlan⽅案实施遇到的容器与宿主机互访问题" class="headerlink" title="ipvlan和macvlan⽅案实施遇到的容器与宿主机互访问题"></a>ipvlan和macvlan⽅案实施遇到的容器与宿主机互访问题</h2><p>我⾸先考虑的⽅案，就是实施成本要低、维护简单，⽬的不变，也就是投⼊产出⽐要⾼。所以，macvlan 和 ipvlan 就是⾸选。</p>
-<p>但是，macvlan 和 ipvlan 都有⼀个共同的特点，就是虚拟 ip 所在的⽹络，⽆法直接和宿主机⽹络互通。简单来 ⾸，利⽤这2个模型，将虚拟 ip 加⼊到容器⾥后，容器⽆法直接 ping 通宿主机。这个不是bug，⽽是这2个⽹卡虚 拟化技术，在设计之初，就是这样的。</p>
-<p>但是，实际情况下，我们不太可能不让容器的⽹络访问宿主机的⽹络。所以，这个问题，必须要解决。</p>
-<p>要解决这个问题，使⽤ macvlan 的话，有⼀个⽐较好的天然解决⽅案。就是使⽤ macvlan 也在宿主机上⽣成⼀个 虚拟⽹卡。这样⼀来，容器⽹络就可以和宿主机互访，操作上就是⼀⾏命令的事⼉。但是！！我们本机利⽤苹果本 虚拟机调试是没有问题的，⽤ KVM 调试，但 Pod 变化触发容器⽹络销毁和新建这种变化时，宿主机就⽆法访问容 器⽹络了，⽽且，在同⼀个宿主机上，宿主机对其内的有些容器可以访问，有些容器不能访问，⾮常奇怪，这个问 题，可能在物理机上不⼀定存在，但是在调研阶段，我们必须要考虑其在线上物理机环境也⽆法实施或者后续遇到 类似问题的情况。所以，我们尝试更换了多个操作系统的Linux内核版本，问题依然，只能另寻他法。</p>
-<h2 id="使⽤-ptp-优雅的解决使⽤macvlan（或ipvlan）时容器和宿主机互访问题"><a href="#使⽤-ptp-优雅的解决使⽤macvlan（或ipvlan）时容器和宿主机互访问题" class="headerlink" title="使⽤ ptp 优雅的解决使⽤macvlan（或ipvlan）时容器和宿主机互访问题"></a>使⽤ ptp 优雅的解决使⽤macvlan（或ipvlan）时容器和宿主机互访问题</h2><p>解决互访问题，前⾯提到的⽅案是，如果使⽤macvlan可以⽤其在宿主机虚拟⼀个⽹卡出来配置⼀个和宿主机的平 ⾏⽹络IP。这个弊端前⾯提到了很重要的⼀部分，另外还有⼀部分没有提到，就是IP资源浪费的情况。相当于每个 主机都需要多⽤⼀个IP地址。</p>
-<p>需要⼀个⽅案，可以通⽤的解决 macvlan 和 ipvlan 这种容器和宿主机⽹络⽆法互访的问题。</p>
-<p>解决这个问题，我们可以借助 veth pair 来完成。其原理是，创建⼀对 veth pair，⼀端挂⼊容器内，⼀端挂⼊宿主 机内。如图：</p>
-<p><img src="/2019/03/19/14/14-1.png" alt="vethpair"></p>
-<p>如上：</p>
-<p>①：借助 ipvlan 或 macvlan 在 em1 上创建2个虚拟⽹卡，然后分别加⼊到 container-1 和 container-2 中，容器内 ⽹卡命名为 eth0，且 IP地址 和宿主机平⾏。<br>②：上⾯的操作完成后，容器之间可以互访，但是，容器和宿主机⽆法互访，这是 ipvlan/macvlan 的制约。<br>③：创建 2 个 veth-pair 对，⼀对加⼊宿主机和容器 container-1 中（容器端叫 veth0，宿主机端为 veth-0x1），另 外⼀对加⼊宿主机和容器 container-2 中（容器端叫 veth0，宿主机端为 veth-0x2），然后在容器内创建指向到宿 主机⽹卡的路由表规则，于此同时，在宿主机上，也要建⽴指向到容器⽹络的路由表规则。</p>
-<p>综上，可以完成容器和宿主机⽹络互访。</p>
-<p>使⽤这种⽅案有⼏个有点：</p>
-<p>①：CNI 插件使⽤ macvlan 或 ipvlan 都没有关系。<br>②：不需要借助 macvlan 在宿主机上虚拟⽹卡出来，因为这种⽅案，不具备通⽤性，⽽且，并不稳定（在某些vm 主机的场景下）。 其实，上述⽅案的实现，便是 K8S CNI 插件 ptp 的原理。</p>
-<h2 id="IPAM的使⽤"><a href="#IPAM的使⽤" class="headerlink" title="IPAM的使⽤"></a>IPAM的使⽤</h2><p>上⾯的操作完成后，解决了 CNI 的问题。剩下的，就是 IPAM 的问题。在整个流程中，CNI 插件主要负责⽹络的 定制，⽽ IP 如何获取，并⾮ CNI 的⼯作内容，它可以通过调⽤ IPAM 插件来完成IP的管理。</p>
-<p>IPAM 插件有很多，最简单的，是 K8S CNI 官⽅提供的 host-local IPAM 插件：<a href="https://github.com/containernetworking/plugins" target="_blank" rel="noopener">https://github.com/containernetworking/plugins</a> 。CNI 的插件，K8S 官⽅也有提 供：<a href="https://github.com/containernetworking/cni" target="_blank" rel="noopener">https://github.com/containernetworking/cni</a> 。</p>
-<p>我们在实际测试过程中发现，K8S 的 CNI 插件，在 kubelet 1.13.4 版本上存在问题，报找不到 cni 名称的问题。所 以，我将 lyft 的⼀个开源项⽬ cni-ipvlan-vpc-k8s 改造了⼀下（主要是解决 ptp 插件设置默认路由规则失败导致 CNI整体调⽤失败的问题，此问题不⼀定在所有场景中存在，需要使⽤者结合⾃⼰业务来处理）。</p>
-<p>下⾯是⼀个 CNI 配置⽂件的样例：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">//cat /etc/cni/net.d/10-maclannet.conflist</span><br></pre></td></tr></table></figure>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;name&quot;: &quot;cni0&quot;,</span><br><span class="line">    &quot;cniVersion&quot;: &quot;0.3.1&quot;,</span><br><span class="line">    &quot;plugins&quot;: [</span><br><span class="line">        &#123;</span><br><span class="line">            &quot;nodename&quot;: &quot;k8s-node-2&quot;,</span><br><span class="line">            &quot;name&quot;: &quot;myipvlan&quot;,</span><br><span class="line">            &quot;type&quot;: &quot;ipvlan&quot;,</span><br><span class="line">            &quot;debug&quot;: true,</span><br><span class="line">            &quot;master&quot;: &quot;eth0&quot;,</span><br><span class="line">            &quot;mode&quot;: &quot;l2&quot;,</span><br><span class="line">            &quot;ipam&quot;: &#123;</span><br><span class="line">                &quot;type&quot;: &quot;host-local&quot;,</span><br><span class="line">                &quot;subnet&quot;: &quot;172.18.12.0/24&quot;,</span><br><span class="line">                &quot;rangeStart&quot;: &quot;172.18.12.211&quot;,</span><br><span class="line">                &quot;rangeEnd&quot;: &quot;172.18.12.230&quot;,</span><br><span class="line">                &quot;gateway&quot;: &quot;172.18.12.1&quot;,</span><br><span class="line">                &quot;routes&quot;: [</span><br><span class="line">                    &#123;</span><br><span class="line">                        &quot;dst&quot;: &quot;0.0.0.0/0&quot;</span><br><span class="line">                    &#125;</span><br><span class="line">                ]</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;,</span><br><span class="line">        &#123;</span><br><span class="line">            &quot;name&quot;: &quot;ptp&quot;,</span><br><span class="line">            &quot;type&quot;: &quot;unnumbered-ptp&quot;,</span><br><span class="line">            &quot;hostInterface&quot;: &quot;eth0&quot;,</span><br><span class="line">            &quot;containerInterface&quot;: &quot;veth0&quot;,</span><br><span class="line">            &quot;ipMasq&quot;: true</span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>配置⽂件说明：插件是2个，⼀个是名字为 myipvlan 的插件，类型为 ipvlan（也就意味着 kubelet 会去 CNI 插件 ⽬录找名为 ipvlan 的可执⾏⽂件），⼀个名为 unnumbered-ptp。</p>
-<p>其中，ipvlan 插件要配置的 IP，会从 CNI 插件⽬录，寻找名为 host-local 的可执⾏⽂件来获取 IP 地址。</p>
-<p>再次说明，ipvlan 和 unnumbered-ptp 是基于 lyft 的⼀个开源项⽬ cni-ipvlan-vpc-k8s 改造过的。</p>
+        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Golang的结构体标签可能每一个Gopher都在用，尤其是在json处理的地方用。比如：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">type NetConf <span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">    Master <span class="built_in">string</span> `json:<span class="string">"master"</span>`</span><br><span class="line">    Mode   <span class="built_in">string</span> `json:<span class="string">"mode"</span>`</span><br><span class="line">    MTU    <span class="keyword">int</span>    `json:<span class="string">"mtu"</span>`</span><br><span class="line">    Debug  <span class="keyword">bool</span>   `json:<span class="string">"debug"</span>`</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>毋庸置疑，这个 NetConf 结构体实体变量在转换 json 的时候，Master 字段会变为 json 字符串中的 “master “。</p>
+<p>如果你对结构体标签了解仅此不多，那可以继续往下看了。</p>
+<h2 id="从一个结构体标签可以从属多个字段开始说"><a href="#从一个结构体标签可以从属多个字段开始说" class="headerlink" title="从一个结构体标签可以从属多个字段开始说"></a>从一个结构体标签可以从属多个字段开始说</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">type T <span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">    f1     <span class="built_in">string</span> <span class="string">"f one"</span></span><br><span class="line">    f2     <span class="built_in">string</span></span><br><span class="line">    f3     <span class="built_in">string</span> `f three`</span><br><span class="line">    f4, f5 int64  `f four <span class="keyword">and</span> five`</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上面代码在声明的时候，f4 和 f5 是一起进行的声明，因此后边的字段标签 “f four and five” 即是 f4 字段的，也是 f5 字段的。</p>
+<p>聪明如你，你的问题就来了。</p>
+<p>上面代码的字段标签比较特殊，是一个字符串 “f four and five” ，我们常用在 json 处理时的字段标签往往是这样的 json:”debug”` ，那么，同样的字段标签，用在多个字段上，是否可行？</p>
+<p>我们验证一下这个问题：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">package main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">    <span class="string">"encoding/json"</span></span><br><span class="line">    <span class="string">"fmt"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">type NetConf <span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">    Master <span class="built_in">string</span> `json:<span class="string">"master"</span>`</span><br><span class="line">    Mode   <span class="built_in">string</span> `json:<span class="string">"mode"</span>`</span><br><span class="line">    <span class="comment">// 下面2个字段，字段标签都是 test</span></span><br><span class="line">    MTU    <span class="keyword">int</span>    `json:<span class="string">"test"</span>`</span><br><span class="line">    Debug  <span class="keyword">bool</span>   `json:<span class="string">"test"</span>`</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function">func <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    n := NetConf&#123;<span class="string">"master1"</span>, <span class="string">"mode1"</span>, <span class="number">1500</span>, <span class="literal">true</span>&#125;</span><br><span class="line">    <span class="keyword">if</span> d,e:=json.Marshal(n);e==nil&#123;</span><br><span class="line">        fmt.Println(<span class="built_in">string</span>(d))</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>代码输出：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;<span class="string">"master"</span>:<span class="string">"master1"</span>,<span class="string">"mode"</span>:<span class="string">"mode1"</span>&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到，同一个结构体中，多个字段拥有同一个字段标签后，golang 内置的 json 解析器将直接忽略这个字段标签对应的<strong>所有</strong>字段的解析。</p>
+<p>换句话说，对于 golang 的 json 包，同样的字段标签，不能用在多个字段上。但是，json 包不能处理，并不等于 golang 不允许，这只是个别 package 的行为，仅此而已。</p>
+<p>虽然我们在对 NetConf 的 MTU 和 Debug 字段都设置的标签为 test，我们怎么证明编译之后，这个字段标签确实存在呢（而不是被编译器主动忽略）？</p>
+<p>这就引出我们下一个内容。</p>
+<h2 id="如何拿到结构体的标签内容"><a href="#如何拿到结构体的标签内容" class="headerlink" title="如何拿到结构体的标签内容"></a>如何拿到结构体的标签内容</h2><p>还是用上面的结构体，代码如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">package main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">    <span class="string">"fmt"</span></span><br><span class="line">    <span class="string">"reflect"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">type NetConf <span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">    Master <span class="built_in">string</span> `json:<span class="string">"master"</span>`</span><br><span class="line">    Mode   <span class="built_in">string</span> `json:<span class="string">"mode"</span>`</span><br><span class="line">    MTU    <span class="keyword">int</span>    `json:<span class="string">"test"</span>`</span><br><span class="line">    Debug  <span class="keyword">bool</span>   `json:<span class="string">"test"</span>`</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function">func <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    n := reflect.TypeOf(NetConf&#123;&#125;)</span><br><span class="line">    <span class="comment">//打印字段MTU的标签</span></span><br><span class="line">    mtu, _ := n.FieldByName(<span class="string">"MTU"</span>)</span><br><span class="line">    fmt.Println(mtu.Tag)</span><br><span class="line">    <span class="comment">//打印字段Debug的标签</span></span><br><span class="line">    de, _ := n.FieldByName(<span class="string">"Debug"</span>)</span><br><span class="line">    fmt.Println(de.Tag)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>输出：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ go run main.go</span><br><span class="line">json:<span class="string">"test"</span></span><br><span class="line">json:<span class="string">"test"</span></span><br></pre></td></tr></table></figure>
+<p>说明什么，同一个结构体的不同字段，确实是可以有相同的字段标签的。只是 golang 内置的 json 解析器自己处理了这种特殊情况而已（或者说，json解析器自己认为这种情况对它而言有点特殊）。</p>
+<p>其实，结构体标签是有常规格式和非常规格式的。而，golang 的 json 包，只是用了结构体标签的常规格式而已。</p>
+<p><code>json:&quot;master&quot;</code> 这种就是常规格式。除此之外就是非常规格式。下面，我们重点来说。</p>
+<h2 id="结构体标签的【常规格式】"><a href="#结构体标签的【常规格式】" class="headerlink" title="结构体标签的【常规格式】"></a>结构体标签的【常规格式】</h2><p>上面已经举例了一个常规格式了，下面再举一个</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">type T <span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">    f <span class="built_in">string</span> `one:<span class="string">"1"</span> two:<span class="string">"2"</span> blank:<span class="string">""</span>`</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看出来，这种具备一个个键值对形式组成的结构体标签，便是常规格式。</p>
+<p>我们可以使用反射，获取结构体标签的每一个键值对内容</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">package main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">    <span class="string">"fmt"</span></span><br><span class="line">    <span class="string">"reflect"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">type T <span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">    f <span class="built_in">string</span> `one:<span class="string">"1"</span> two:<span class="string">"2"</span> blank:<span class="string">""</span>`</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function">func <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    n := reflect.TypeOf(T&#123;&#125;)</span><br><span class="line">    <span class="comment">//获取字段：f</span></span><br><span class="line">    t, _ := n.FieldByName(<span class="string">"f"</span>)</span><br><span class="line">    <span class="comment">// 获取整个结构体标签内容</span></span><br><span class="line">    fmt.Println(t.Tag)</span><br><span class="line">    <span class="comment">// 获取第1个键值对内容的值，以及是否设置了值</span></span><br><span class="line">    fmt.Println(t.Tag.Lookup(<span class="string">"one"</span>))</span><br><span class="line">    <span class="comment">// 获取第2个键值对内容的值，以及是否设置了值</span></span><br><span class="line">    fmt.Println(t.Tag.Lookup(<span class="string">"two"</span>))</span><br><span class="line">    <span class="comment">// 获取不存在的键的值，以及是否设置了值</span></span><br><span class="line">    fmt.Println(t.Tag.Lookup(<span class="string">"xxxx"</span>))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$ go run main.go</span><br><span class="line">one:<span class="string">"1"</span> two:<span class="string">"2"</span> blank:<span class="string">""</span></span><br><span class="line"><span class="number">1</span> <span class="literal">true</span></span><br><span class="line"><span class="number">2</span> <span class="literal">true</span></span><br><span class="line"> <span class="literal">false</span></span><br></pre></td></tr></table></figure>
+<p>可以看出来，用 reflect 包的 Tag ，可以获取每一个键值对的内容，以及是否存在这个键。</p>
+<p>另外需要特别注意：结构体标签的多个键值对之间，必须用空格分割。，不能用逗号！！！，不能用逗号！！！，不能用逗号！！！</p>
+<h2 id="结构体标签的键值对中，键有什么用"><a href="#结构体标签的键值对中，键有什么用" class="headerlink" title="结构体标签的键值对中，键有什么用"></a>结构体标签的键值对中，键有什么用</h2><p>键的用处，通常来说，就是 package name 。比如 json 解析的时候，结构体标签的键值对中，键通常就设置为 json。值设置为要解析或泛解析为什么字段名称。啰嗦一点，再看一下示例</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">type T1 <span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">    <span class="comment">// json 包将 F1 字段最终解析为 json字符串内容 foo 。</span></span><br><span class="line">    F1 <span class="keyword">int</span> `json:<span class="string">"foo"</span>`</span><br><span class="line"> &#125;</span><br><span class="line"> type T2 <span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">    <span class="comment">// json 包将 F2 字段最终解析为 json字符串内容 bar 。</span></span><br><span class="line">    F2 <span class="keyword">int</span> `json:<span class="string">"bar"</span>`</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<h2 id="结构体标签对类型转换没有影响"><a href="#结构体标签对类型转换没有影响" class="headerlink" title="结构体标签对类型转换没有影响"></a>结构体标签对类型转换没有影响</h2><p>将一个结构体的值，转换为其他类型时，需要结构体底层类型必须相同。但是字段标签不包括在内。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">type T1 <span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">     f <span class="keyword">int</span> `json:<span class="string">"foo"</span>`</span><br><span class="line"> &#125;</span><br><span class="line"> type T2 <span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">     f <span class="keyword">int</span> `json:<span class="string">"bar"</span>`</span><br><span class="line"> &#125;</span><br><span class="line"> t1 := T1&#123;<span class="number">10</span>&#125;</span><br><span class="line"> var t2 T2</span><br><span class="line"> t2 = T2(t1)</span><br><span class="line"> fmt.Println(t2) <span class="comment">// &#123;10&#125;</span></span><br></pre></td></tr></table></figure>
+<h2 id="结构体标签的使用场景"><a href="#结构体标签的使用场景" class="headerlink" title="结构体标签的使用场景"></a>结构体标签的使用场景</h2><h3 id="Un-marshaling"><a href="#Un-marshaling" class="headerlink" title="(Un)marshaling"></a>(Un)marshaling</h3><p>在 Golang 里边，结构体标签用的最多的地方，就是编码和解码。上面我们已经举了好几个关于 json 编码和解码的例子，不再多说。json（encoding/json） 只是编码解码的一种格式而已，其实 xml（encoding/xml）也在使用结构体标签。</p>
+<p>在HTTP表单数据处理上，比如这个包 <a href="https://github.com/gorilla/schema" target="_blank" rel="noopener">gorilla/schema</a>，可以将HTTP的POST表单解析为一个结构体。</p>
+<h3 id="ORM"><a href="#ORM" class="headerlink" title="ORM"></a>ORM</h3><p>ORM，是对象关系映射的缩写（Object-relation mapping），主要用在数据库操作上。Golang里边有很多类似的工具，比如：gorm 等。</p>
+<h3 id="go-vet"><a href="#go-vet" class="headerlink" title="go vet"></a>go vet</h3><p>golang 的编译器对结构体标签的格式并不会强制检查其是否是合法的键值对。但是，go vet 工具会做检查。所以，为了程序的健壮性和正确性，我们可以用 go vet 作为 CI pipeline 的一部分，用在编译之前。</p>
+<p>前面我提到，golang的结构体标签的键值对之间用空格分割，如果你一不小心用逗号分隔，还忘了这个事情，后续程序出问题，还真的无法立刻就能排查出来，这个时候，go vet 用处就很大了。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">package main</span><br><span class="line">type T <span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">    f <span class="built_in">string</span> <span class="string">"one two three"</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="function">func <span class="title">main</span><span class="params">()</span> </span>&#123;&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&gt; go vet tags.go</span><br><span class="line">tags.go:<span class="number">4</span>: <span class="class"><span class="keyword">struct</span> <span class="title">field</span> <span class="title">tag</span> `<span class="title">one</span> <span class="title">two</span> <span class="title">three</span>` <span class="title">not</span> <span class="title">compatible</span> <span class="title">with</span> <span class="title">reflect</span>.<span class="title">StructTag</span>.<span class="title">Get</span>:</span> bad syntax <span class="keyword">for</span> <span class="class"><span class="keyword">struct</span> <span class="title">tag</span> <span class="title">pair</span></span></span><br></pre></td></tr></table></figure>
+<h3 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h3><p>结构体标签还有很多其他用处。比如：配置管理、结构体字段的默认值、校验、命令行参数描述等等。golang 官方仓库的wiki中也有一些说明，有兴趣的可以看一下： <a href="https://github.com/golang/go/wiki/Well-known-struct-tags" target="_blank" rel="noopener">Well-known-struct-tags</a> </p>
 
       
     </div>
@@ -533,11 +484,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/kubernetes/" rel="tag"># kubernetes</a>
-          
-            <a href="/tags/ipvlan/" rel="tag"># ipvlan</a>
-          
-            <a href="/tags/容器与宿主机通信/" rel="tag"># 容器与宿主机通信</a>
+            <a href="/tags/golang/" rel="tag"># golang</a>
           
         </div>
       
@@ -550,8 +497,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/01/17/13/" rel="next" title="解决网卡丢包问题，以及丢包问题解决后系统网络还是慢的问题">
-                <i class="fa fa-chevron-left"></i> 解决网卡丢包问题，以及丢包问题解决后系统网络还是慢的问题
+              <a href="/2019/04/03/16/" rel="next" title="一个奇怪的golang等值判断问题">
+                <i class="fa fa-chevron-left"></i> 一个奇怪的golang等值判断问题
               </a>
             
           </div>
@@ -559,10 +506,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/04/02/15/" rel="prev" title="Golang实现数据结构“栈”的三种实现，性能对比及应用示例">
-                Golang实现数据结构“栈”的三种实现，性能对比及应用示例 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -694,7 +637,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#CNI-和-IPAM-概述"><span class="nav-number">1.</span> <span class="nav-text">CNI 和 IPAM 概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#虚拟SDN网络的优势和劣势"><span class="nav-number">2.</span> <span class="nav-text">虚拟SDN网络的优势和劣势</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#容器和宿主机平⾏⽹络打通通常会遇到的问题"><span class="nav-number">3.</span> <span class="nav-text">容器和宿主机平⾏⽹络打通通常会遇到的问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ipvlan和macvlan⽅案实施遇到的容器与宿主机互访问题"><span class="nav-number">4.</span> <span class="nav-text">ipvlan和macvlan⽅案实施遇到的容器与宿主机互访问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#使⽤-ptp-优雅的解决使⽤macvlan（或ipvlan）时容器和宿主机互访问题"><span class="nav-number">5.</span> <span class="nav-text">使⽤ ptp 优雅的解决使⽤macvlan（或ipvlan）时容器和宿主机互访问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#IPAM的使⽤"><span class="nav-number">6.</span> <span class="nav-text">IPAM的使⽤</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#从一个结构体标签可以从属多个字段开始说"><span class="nav-number">2.</span> <span class="nav-text">从一个结构体标签可以从属多个字段开始说</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#如何拿到结构体的标签内容"><span class="nav-number">3.</span> <span class="nav-text">如何拿到结构体的标签内容</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#结构体标签的【常规格式】"><span class="nav-number">4.</span> <span class="nav-text">结构体标签的【常规格式】</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#结构体标签的键值对中，键有什么用"><span class="nav-number">5.</span> <span class="nav-text">结构体标签的键值对中，键有什么用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#结构体标签对类型转换没有影响"><span class="nav-number">6.</span> <span class="nav-text">结构体标签对类型转换没有影响</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#结构体标签的使用场景"><span class="nav-number">7.</span> <span class="nav-text">结构体标签的使用场景</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Un-marshaling"><span class="nav-number">7.1.</span> <span class="nav-text">(Un)marshaling</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ORM"><span class="nav-number">7.2.</span> <span class="nav-text">ORM</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#go-vet"><span class="nav-number">7.3.</span> <span class="nav-text">go vet</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#其他"><span class="nav-number">7.4.</span> <span class="nav-text">其他</span></a></li></ol></li></ol></div>
             
 
           </div>
