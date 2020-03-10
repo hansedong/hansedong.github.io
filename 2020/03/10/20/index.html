@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="k8s,网络,macvlan,flannel,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="背景谈论问题，先谈背景。 K8s 在虚拟网络下存在很多问题。比如说：  Pod IP 无法被外部访问，只能在 K8s 集群内访问。直接从实例上无法做到与物理机实例互联互通。 Java 等依赖外部注册中心的服务，如果不放到同一个 K8s 集群里，服务之间无法互访。 复杂场景下，比如：多机房、集群灾备等，需要多 K8s 集群。原生 K8s 集群下，每个集群网络都是虚拟的，多个虚拟网络要互通。如果是 f">
+<meta name="keywords" content="k8s,网络,macvlan,flannel">
+<meta property="og:type" content="article">
+<meta property="og:title" content="如何打通 K8s 虚拟网络（flannel vxlan 网络）和 K8s 2层网络（macvlan网络）">
+<meta property="og:url" content="http://yoursite.com/2020/03/10/20/index.html">
+<meta property="og:site_name" content="国南之境">
+<meta property="og:description" content="背景谈论问题，先谈背景。 K8s 在虚拟网络下存在很多问题。比如说：  Pod IP 无法被外部访问，只能在 K8s 集群内访问。直接从实例上无法做到与物理机实例互联互通。 Java 等依赖外部注册中心的服务，如果不放到同一个 K8s 集群里，服务之间无法互访。 复杂场景下，比如：多机房、集群灾备等，需要多 K8s 集群。原生 K8s 集群下，每个集群网络都是虚拟的，多个虚拟网络要互通。如果是 f">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://yoursite.com/2020/03/10/20/D91422D03BD4B78E428069528863129C.jpg">
+<meta property="og:image" content="http://yoursite.com/2020/03/10/20/E314DEF0202D2C9259CB7B12D0B8584A.jpg">
+<meta property="og:image" content="http://yoursite.com/2020/03/10/20/9C7EBD5A69FA8E52451FDEE6E4C77E58.jpg">
+<meta property="og:image" content="http://yoursite.com/2020/03/10/20/70F56C8B2FEF09C5C5FEAFD70C46C5A0.jpg">
+<meta property="og:image" content="http://yoursite.com/2020/03/10/20/A7D64EC67A4C51719A1EB143060040EB.png">
+<meta property="og:image" content="http://yoursite.com/2020/03/10/20/945CEF4AAD8539720A3E4E0A6719B097.png">
+<meta property="og:image" content="http://yoursite.com/2020/03/10/20/70856BC3866144C085B2FBFF1F3BD649.png">
+<meta property="og:image" content="http://yoursite.com/2020/03/10/20/A541DBAEEE6F6FFC4350BCC381C996DD.jpg">
+<meta property="og:updated_time" content="2020-03-10T15:26:27.323Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="如何打通 K8s 虚拟网络（flannel vxlan 网络）和 K8s 2层网络（macvlan网络）">
+<meta name="twitter:description" content="背景谈论问题，先谈背景。 K8s 在虚拟网络下存在很多问题。比如说：  Pod IP 无法被外部访问，只能在 K8s 集群内访问。直接从实例上无法做到与物理机实例互联互通。 Java 等依赖外部注册中心的服务，如果不放到同一个 K8s 集群里，服务之间无法互访。 复杂场景下，比如：多机房、集群灾备等，需要多 K8s 集群。原生 K8s 集群下，每个集群网络都是虚拟的，多个虚拟网络要互通。如果是 f">
+<meta name="twitter:image" content="http://yoursite.com/2020/03/10/20/D91422D03BD4B78E428069528863129C.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/03/10/20/">
+
+
+
+
+
+  <title>如何打通 K8s 虚拟网络（flannel vxlan 网络）和 K8s 2层网络（macvlan网络） | 国南之境</title>
+  
+
+
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?74a7c642f7a0292e45cc64f132081563";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">国南之境</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/03/10/20/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="国南之境">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="国南之境">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">如何打通 K8s 虚拟网络（flannel vxlan 网络）和 K8s 2层网络（macvlan网络）</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-03-10T23:17:43+08:00">
+                2020-03-10
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/k8s/" itemprop="url" rel="index">
+                    <span itemprop="name">k8s</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/k8s/网络/" itemprop="url" rel="index">
+                    <span itemprop="name">网络</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2020/03/10/20/" class="leancloud_visitors" data-flag-title="如何打通 K8s 虚拟网络（flannel vxlan 网络）和 K8s 2层网络（macvlan网络）">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>谈论问题，先谈背景。</p>
+<p>K8s 在虚拟网络下存在很多问题。比如说：</p>
+<ol>
+<li>Pod IP 无法被外部访问，只能在 K8s 集群内访问。直接从实例上无法做到与物理机实例互联互通。</li>
+<li>Java 等依赖外部注册中心的服务，如果不放到同一个 K8s 集群里，服务之间无法互访。</li>
+<li>复杂场景下，比如：多机房、集群灾备等，需要多 K8s 集群。原生 K8s 集群下，每个集群网络都是虚拟的，多个虚拟网络要互通。如果是 flannel 的话，可以借助同一个 etcd 来实现多 K8s 集群的 Pod 互通，但是 service ip 可就不行了，依然是个问题。</li>
+<li>以应用中心为视角来看，从上层架构来说，底层 instance 具备可访问行，不论是容器实例，物理机，还是虚拟机实例，都应该具备可访问属性。而虚拟网络下的容器实例，违背了这一点。</li>
+</ol>
+<p>所以说，K8s 虚拟网络模型，需要变迁到 K8s 2层容器网络模型。改造为2层网络的方式主要处理几个点：</p>
+<ol>
+<li>从 CNI 中，选择容器网络2层化方案。</li>
+<li>从 CNI 中，选择合适的 IPAM 方案。</li>
+</ol>
+<p>K8s 官方的 CNI 中，能比较好的支持容器2层网络方案的，比如：bridge + veth pair、macvlan、ipvlan 等。而 IPAM ，可以说最基本的就是 host-local 方案了。</p>
+<p>简单比较一下 bridge 模型和 macvlan 模式</p>
+<p>bridge 就是虚拟交换机：网桥。从一些资料来看，如果单纯的说 bridge，其本身性能还是很高的，但是 bridge 下挂 veth pair，整套连起来运作，veth pair 会拖累 bridge 的性能表现。这样一来，就远没有 macvlan 性能高了。我们参考几组数据：</p>
+<p>1、macvlan bridge 模式，对 CPU 负载的消耗，bridge 模式占用 CPU 资源最高。</p>
+<p><img src="/2020/03/10/20/D91422D03BD4B78E428069528863129C.jpg" alt=""></p>
+<p>2、对比 macvlan、bridge、OVS 及 Native Host 的性能</p>
+<p>注意：CHC 表是的是，同主机上 Container->Host->Container 模式。CHHC 表是的是跨主机：Container->Host->Host->Container 模式。</p>
+<p><img src="/2020/03/10/20/E314DEF0202D2C9259CB7B12D0B8584A.jpg" alt=""></p>
+<p><img src="/2020/03/10/20/9C7EBD5A69FA8E52451FDEE6E4C77E58.jpg" alt=""></p>
+<p>可以看到，macvlan 模式下，不论是同主机间的容器互访，还是跨主机间的容器互访，其单位时间内的请求/响应量级都很高，几乎接近主机网络（Native Host）。</p>
+<p>再来看一下吞吐量（容器互访，横坐标为TCP）</p>
+<p><img src="/2020/03/10/20/70F56C8B2FEF09C5C5FEAFD70C46C5A0.jpg" alt=""></p>
+<p>更详细的评测数据，可以参考：<a href="20/B6759E299718415E3CC828CBC54ADF5F.pdf">performance of container networking.pdf</a></p>
+<p>总的来说，从某个角度看，macvlan 就是要替换 bridge + veth 模式的，就好比，macvtap 就是要替换 bridge + tap 模式的，macvlan 和 macvtap 只是用在场景不同而已。而我们团队，出于性能考虑，目前开发环境、线上环境，CNI 插件都是用 macvlan 做的2层容器网络，IPAM（IP Address Management） 模式，使用的是简单的 host-local（本机分配） 模式（后期要调整）。</p>
+<p>是的。这里提到，“我们团队”。其实，在整个公司中，做 K8s 团队的不止我们一个。其他团队的实施，还主要以 flannel 虚拟网络为主。目前来说，2个团队现在已经整合为一个部门的团队，所以，K8s 基础设施也要统一，恰好，其中重要的一环，就是将现在虚拟网络的 K8s，也改造为 L2 层网络的 K8s 。目的主要有3个：</p>
+<ol>
+<li>底层设施层面，统一 K8s 集群。不要虚拟和2层都有，增加维护成本。</li>
+<li>在上层部署系统层面，由一套统一的部署系统，分别对接底层的 K8s。这就要求底层的 K8s 是统一的。</li>
+<li>更上面的各种抽象模型统一，比如，对接服务到应用中心，而应用中心下的 instance 模型，要求 instance 实例都在 2层网络下，这样一来，围绕应用中心展开的：配置中心、发现中心、监控告警，都对接 2 层 instance 实例，就好开展了。</li>
+</ol>
+<p>好了，问题来了：</p>
+<ol>
+<li>虽然 K8s 集群做成 L2 K8s 不是很复杂的事儿，但是改造完得迁移服务。</li>
+<li>迁移的过程，不是强制将原集群的实例，部署到新集群里，这个过程，是用户部署的动作来触发，应该是平滑的，对其业务无感知的。强制从1个集群迁移到另外一个集群，风险太高。</li>
+<li>要保证业务平滑，必须会遇到一个现实问题：部分服务在虚拟网络 K8s 中，部分在2层网络 K8s 中。虚拟网络 K8s 集群里的实例访问 K8s L2层网络下的实例还好，不会有问题，但是，反过来，可就访问不通了（原生 K8s 虚拟网络的所有实例的可访问性，是只有集群内部生效的）。</li>
+</ol>
+<p>所以，一个问题摆在眼前：K8s 虚拟网络，要和 K8s L2 层网络打通。这样才能保证新部署的服务，部署到 L2 层 K8s 集群里之后，它还可以访问到原来那个 K8s 虚拟网络下的实例。这一点对 Java 这种要通过注册中心，走RPC调用的服务，尤为重要。</p>
+<p>注意：本文说的打通，其立场，是 2 个集群打通，而不是一个 L2 层网卡的 K8s 集群，要和多个 虚拟网络 K8s 集群打通。</p>
+<h2 id="K8s-虚拟网络（flannel）和-L2-层网络（macvlan）"><a href="#K8s-虚拟网络（flannel）和-L2-层网络（macvlan）" class="headerlink" title="K8s 虚拟网络（flannel）和 L2 层网络（macvlan）"></a>K8s 虚拟网络（flannel）和 L2 层网络（macvlan）</h2><h3 id="L2-macvlan-网络"><a href="#L2-macvlan-网络" class="headerlink" title="L2 macvlan 网络"></a>L2 macvlan 网络</h3><p>要做 2 个不同网络集群的打通，macvlan 网络最简单，简单理解为一个网桥就好，实际上，我们的 macvlan 就是用的 bridge 模式。</p>
+<p>下面是 K8s 基于 macvlan 网络的一个简单架构图：</p>
+<p><img src="/2020/03/10/20/A7D64EC67A4C51719A1EB143060040EB.png" alt="马蜂窝二层K8s.png"></p>
+<p>这个网络模式有几个核心的点：</p>
+<ol>
+<li>容器之间，是可以通过 macvlan 互访的，不需要借助外部交换机。所以，macvlan 模式，用的是 bridge 模式，而不是 vepa 模式，vepa 模式的话，需要交换机开启“发夹”模式，对于我们的场景来说，没有必要在交换机上做这个事情，另外，交换机上还没有统一管理规则的需求。</li>
+<li>macvlan 的父接口，是 bond0，bond0 是做了网卡聚合的。可以提高带宽。</li>
+<li>宿主机网络上，有一个 macv-host 网卡。这个网卡其实是 macvlan 的一个子接口，其目的，是为了实现宿主机与容器互访，这一点非常重要。</li>
+<li>K8s 集群的交换机是独享，且做了高可用的。为了应对以后容器数量增长提前做的准备。</li>
+<li>我们是自建机房。如果是云服务器的话，macvlan 模式可能不一定用的了。因为 macvlan 依赖网卡特性以及网卡的混杂模式，这些特点，云服务器不一定支持。云服务器的话，可以考虑云服务厂商提供的现成的，且与 VPC 良好集合的方案。</li>
+</ol>
+<h3 id="flannel-网络"><a href="#flannel-网络" class="headerlink" title="flannel 网络"></a>flannel 网络</h3><p>flannel 网络，相对于 macvlan 网络来说，要复杂一些。</p>
+<p>flannel 网络，是 CoreOS 团队为 K8s 打造的一款用于解决 POD 跨主机互访的网络实现。它是一个 overlay 网络，是构建在 L2 层网络之上的虚拟网络。每一个 Pod 实例，都有一个虚拟 IP 地址。</p>
+<p>下面一是 flannel 的网络架构图：</p>
+<p><img src="/2020/03/10/20/945CEF4AAD8539720A3E4E0A6719B097.png" alt="Cluster Host"></p>
+<p>这个网络模式有几个核心的点：</p>
+<ol>
+<li>在主机上，flannel 的守护进程 flanneld 在启动之后，会创建一个 flannel.1 的网卡（如果是 vxlan backend 的话）。它的作用，就是为了容器跨主机访问做封包、解包、创建整个 POD 网络互访需要的路由规则等内容的。要点：解决容器跨节点通信。</li>
+<li>在主机上，还有一个 cni0 网卡。它的作用，和 docker 本身网络下的 docker0 作用是一样的，它们都是网桥 bridge。目的是解决容器在同一个主机上通信的。另外，cni0 这个网卡，并不是 flannel 启动的，确切的说，它是 K8s flannel 的这个 CNI 插件（在第一次创建 Pod 的时候）创建的。</li>
+<li>flannel 网络是一个虚拟网络，容器的流量要出访，必须经过 flannel 做封包处理，这也是 overlay 网络的特点。flannel vxlan 是做的 UDP 封包。</li>
+</ol>
+<h2 id="如果在-L2-层-K8s-网络里引入-flannel-网络，必须理清几个点"><a href="#如果在-L2-层-K8s-网络里引入-flannel-网络，必须理清几个点" class="headerlink" title="如果在 L2 层 K8s 网络里引入 flannel 网络，必须理清几个点"></a>如果在 L2 层 K8s 网络里引入 flannel 网络，必须理清几个点</h2><p>打通 2 个网络的方案中，是可以考虑，在 L2 层 K8s 中，引入虚拟网络这种方案的。如果是这种方案的话，flannel 网络下 K8s 用的组件，是不一定都得用在 L2 层 K8s 网络里的。因此，要理清几个点：</p>
+<p>①：访问虚拟网络 POD 实例，就一定需要知道目标实例在哪个物理机节点。这个是谁来维护的（flanneld 守护进程）。</p>
+<p>②：只是知道谁来维护 POD 网络信息还不行，必须得具备访问虚拟网络的能力，这就依赖 flannel 的 网卡：flannel.1 。这个网卡，也是 flanneld 守护进程创建的。</p>
+<p>③：通常 flannel 网络里，还有一个 cni0 网卡，它要解决的点是同一个主机上容器互通的。而 L2 层 K8s 集群访问虚拟网络 K8s 集群，是要跨节点访问的，所以，L2 层网络的 K8s 下，cni0 网卡并不需要。</p>
+<p>因此，从表现上来看，如果我们的方案是在 L2 层 K8s 里起虚拟网络 flannel 的话，只用 flannel 网络里的 flanneld 进程，而不用 flannel 网络下的 CNI 插件。</p>
+<h2 id="实施方案"><a href="#实施方案" class="headerlink" title="实施方案"></a>实施方案</h2><p>关于打通 2 个现有不同网络模式的 K8s 集群，做到实例互通，其实最大的点在于，对哪个集群做改造。L2 层网络的 K8s 是基于 macvlan 来做的，这种模式的 K8s 下，容器 IP 就和虚拟机 IP 一样，可以认为 L2 层网络的 K8s 下的容器，就和现有的物理机、虚拟机一样。因此，这个问题的本质就成了：如何让 L2 层网络的 K8s 可以访问到虚拟网络的 K8s 实例。</p>
+<p>方案有3个：</p>
+<h3 id="方案1：通过-VPN-的方式"><a href="#方案1：通过-VPN-的方式" class="headerlink" title="方案1：通过 VPN 的方式"></a>方案1：通过 VPN 的方式</h3><p>VPN，在 L2 层网络的每一个节点，通过 VPN 的方式接入虚拟网络中。所以，需要虚拟网络 K8s 的某个节点开启 VPN Server，2 层网络的每一个 K8s 节点，都通过 VPN Client 接入到虚拟网络中。这种方式，有2个弊端：</p>
+<ol>
+<li>原来的虚拟网络集群的某个节点，得起一个 Server，这个 Server 所在节点，要承载 2个 集群的所有互访流量。这个 Server 所在主机的网络带宽可能会成为瓶颈，另外，Server 一旦挂了，2个集群的互通，全部中断。</li>
+<li>L2 层网络 K8s 的所有节点，都得启动 VPN Client。这也是个维护成本。</li>
+</ol>
+<h3 id="方案2：找几个节点，做路由转发，相当于路由器的角色。"><a href="#方案2：找几个节点，做路由转发，相当于路由器的角色。" class="headerlink" title="方案2：找几个节点，做路由转发，相当于路由器的角色。"></a>方案2：找几个节点，做路由转发，相当于路由器的角色。</h3><p>这个方案的主要核心在于，在虚拟网络 K8s 中，挑选几个节点，作为路由器角色，暂且称之为中转节点。L2 层网络K8s 访问虚拟网络 K8s 的流量，都经过这几个中转节点。中转节点，必须要在虚拟网络 K8s 中。访问模式为：2层容器->中转节点->虚拟网络容器。这个方案，如果可以实施的话，还是会存在中转节点是网络瓶颈的问题（但是比方案1好多了）。</p>
+<h3 id="方案3：将-L2-层网络的-K8s-集群的节点，全部加入到虚拟网络-K8s-的网络中。"><a href="#方案3：将-L2-层网络的-K8s-集群的节点，全部加入到虚拟网络-K8s-的网络中。" class="headerlink" title="方案3：将 L2 层网络的 K8s 集群的节点，全部加入到虚拟网络 K8s 的网络中。"></a>方案3：将 L2 层网络的 K8s 集群的节点，全部加入到虚拟网络 K8s 的网络中。</h3><p>这个方案的本质是，在 L2 层网络下的 K8s 节点上，部署 flannel 的组件。从网络层的角度看，L2 K8s 集群的实例，即属于 macvlan 2层网络，又属于 flannel 虚拟网络。但是这里有几个细节是要注意的：</p>
+<ol>
+<li>L2 K8s 集群部署的 flannel 其实是需要在每个节点都部署的。</li>
+<li>L2 K8s 节点上的 flannel，其职责，只是为了启动 flannel.1 这个虚拟网卡，这个网络的职责，就是承担 L2 K8s 节点实例，访问虚拟网络的一个桥梁。</li>
+<li>flannel 组件，必须，且不能干预到 L2 层 K8s 体系内的 2 个角色：Docker 、CNI。之所以提这个点，是因为，flannel 的部署往往和容器的 IP 分配耦合在一起。尤其是 flannel 官方提供的部署工具中，还有操作 docker 的脚本。这个是不需要执行的。</li>
+</ol>
+<p>上面的3个方案，最终的落地方案是：方案3 。原因是操作简单，没有任何节点成为整个方案的瓶颈。</p>
+<h3 id="最终方案中，要解决及不准备解决的问题"><a href="#最终方案中，要解决及不准备解决的问题" class="headerlink" title="最终方案中，要解决及不准备解决的问题"></a>最终方案中，要解决及不准备解决的问题</h3><ol>
+<li>虚拟网络 K8s 下的容器，访问 L2 层 K8s 下的容器和物理机。（ 要解决，且天然就没有屏障）</li>
+<li>L2 物理机访问虚拟网络容器。（要解决）</li>
+<li>L2 容器访问虚拟网络容器。（要解决，注意，这里没和第 2 点放到一起，是因为这个问题解起来不一样）</li>
+<li>L2 容器和物理机访问虚拟网络 service vip 。（不解决）</li>
+</ol>
+<p>关于在 L2 层 K8s 中，【不打算】支持访问 flannel 虚拟网络里的 service ip 的理由如下：</p>
+<p>①：目前，需要网络里的服务，不需要靠 K8s service ip 来调用。比如：Java 体系内的 Spring Cloud 实例互访就不需要 service 。</p>
+<p>②：L2 层网络 K8s 访问虚拟网络 service ip，相当于动作比较大，需要在 L2 层 K8s 部署 kube-proxy ，且这个 kube-proxy 要指向到另外一个虚拟网络集群的 kueb-apiserver 上。仅为支持这样一个弱需求，就要增加了整体架构复杂度。且，如果在 L2 层 K8s 里引入其他集群的 kube-proxy，它会新生成很多的 iptables 规则，有碍于现有 L2 层 K8s 的整体性能。</p>
+<p>③：在一个纯 L2 层的 K8s 网络里，支持 service ip ，并不是说起了 kube-proxy 就完了，这和 flannel 不一样。后边会专门开心的文章，将如何在 L2 层 K8s 对 service ip 的访问支持。</p>
+<h3 id="最终方案架构"><a href="#最终方案架构" class="headerlink" title="最终方案架构"></a>最终方案架构</h3><p><img src="/2020/03/10/20/70856BC3866144C085B2FBFF1F3BD649.png" alt="K8s 虚拟网络（flannel）与2层网络（macvlan）容器网络打通 (1).png"></p>
+<p>说明：</p>
+<ol>
+<li>左图为基于 flannel 的虚拟网络集群，右图为基于 macvlan 的 2层网络集群。</li>
+<li>flannel 的网络相对经典，主机内容器互通（比如 集群1中，容器1 和容器2 互通），唯一的依赖就是网桥：bridge。</li>
+<li>macvlan 网络类似，主机内容器互通（比如 集群2中，容器1 和容器2 互通），唯一的依赖，就是 bond0（网卡聚合），这里要注意，bond0 已经成了 macvlan 下的虚拟交换机，类似于网桥，和 bridge 最大的区别有2个，一个 macvlan 相比 bridge 来说，交换性能更高，另外就是，主机若要访问主机上的容器，必须借助基于 bond0 生成一个宿主机的新网卡（子接口）：macv-host。</li>
+<li>主机内，不同网络的流转，借助主机内的路由表和 iptable。</li>
+<li>集群2（2层网络）里的物理机，若要访问集群1（虚拟网络）里的容器。需要在2层网络集群的节点上，搭建 flannel。这个 flannel 版本、配置，和集群1里的 flannel 一样，并且使用同一套 etcd 集群，如上图。所有 flannel 基于 集群1 里的 etcd，共享网络发现能力和数据。所以，flannel 的职责非常清晰，只有3个：网络发现+同步路由表+overlay包处理。这种方式，解决了 L2物理机访问虚拟网络容器 这个点。</li>
+<li>集群2（2层网络）里的容器，若要访问集群1（虚拟网络）里的容器，除了上面的工作之外，还需要一个事儿，那就是让集群2里的容器，知道如何访问集群1的网络。因此，需要将集群2的 K8s macvlan CNI 做一个配置，将访问虚拟网络的路由表，配置进去，且这个对虚拟网络的路由表依赖的网关，设置为当前物理主机。换句话说，当前主机，要充当路由器的角色。</li>
+</ol>
+<p>2层K8s里的容器访问虚拟网络的流量的数据流为：</p>
+<p>2层网络 K8s 容器->流转到当前物理机->主机路由表->主机flannel->出2层K8s的节点->到虚拟K8s的节点->节点路由表->节点bridge网桥->虚拟网络容器内部。</p>
+<h2 id="补充"><a href="#补充" class="headerlink" title="补充"></a>补充</h2><h3 id="1、贴一下-L2-层-K8s-节点最终的-CNI-配置"><a href="#1、贴一下-L2-层-K8s-节点最终的-CNI-配置" class="headerlink" title="1、贴一下 L2 层 K8s 节点最终的 CNI 配置"></a>1、贴一下 L2 层 K8s 节点最终的 CNI 配置</h3><p><img src="/2020/03/10/20/A541DBAEEE6F6FFC4350BCC381C996DD.jpg" alt=""></p>
+<p>这个是 L2 K8s CNI 必须要做的一个配置，其目的是，让 L2 K8s 里启动的容器里，包括一个路由表，告诉其如果访问的网络是虚拟网络的 IP 端口的话，流量不要走原来的网关，而是走到当前节点的物理机上。</p>
+<p>另外，L2 K8s 节点还要做几个事儿：</p>
+<ol>
+<li>Linux 上 必须开启 ip_forward。</li>
+<li>iptables 中也要适当做放行，也就是说，需要在 FORWARD 链添加 ACCEPT。</li>
+</ol>
+<p>上面的2个点如果不做处理的话，发往虚拟网络下容器的流量，到了宿主机之后，也会被丢弃。</p>
+<h3 id="2、一些参考"><a href="#2、一些参考" class="headerlink" title="2、一些参考"></a>2、一些参考</h3><p><a href="https://www.lijiaocn.com/%E6%8A%80%E5%B7%A7/2017/03/31/linux-net-devices.html" target="_blank" rel="noopener">https://www.lijiaocn.com/%E6%8A%80%E5%B7%A7/2017/03/31/linux-net-devices.html</a><br><a href="https://blog.huiyiqun.me/2016/11/24/virtualization-with-libvirt-kvm-and-macvtap.html" target="_blank" rel="noopener">https://blog.huiyiqun.me/2016/11/24/virtualization-with-libvirt-kvm-and-macvtap.html</a><br><a href="https://events.static.linuxfound.org/sites/events/files/slides/LinuxConJapan2014_makita_0.pdf" target="_blank" rel="noopener">https://events.static.linuxfound.org/sites/events/files/slides/LinuxConJapan2014_makita_0.pdf</a><br><a href="https://cs.nju.edu.cn/tianchen/lunwen/2017/sgws-Zhao.pdf" target="_blank" rel="noopener">https://cs.nju.edu.cn/tianchen/lunwen/2017/sgws-Zhao.pdf</a><br><a href="https://tigerprints.clemson.edu/cgi/viewcontent.cgi?article=1034&amp;context=computing_pubs" target="_blank" rel="noopener">https://tigerprints.clemson.edu/cgi/viewcontent.cgi?article=1034&amp;context=computing_pubs</a><br><a href="https://www.cnblogs.com/echo1937/p/7249037.html" target="_blank" rel="noopener">https://www.cnblogs.com/echo1937/p/7249037.html</a><br><a href="https://blog.51cto.com/dog250/1652063" target="_blank" rel="noopener">https://blog.51cto.com/dog250/1652063</a><br><a href="https://www.praqma.com/stories/debugging-kubernetes-networking" target="_blank" rel="noopener">https://www.praqma.com/stories/debugging-kubernetes-networking</a><br><a href="https://msazure.club/flannel-networking-demystify" target="_blank" rel="noopener">https://msazure.club/flannel-networking-demystify</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>Donate comment here</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>打赏</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.png" alt="国南之境 微信支付">
+        <p>微信支付</p>
+      </div>
+    
+
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/k8s/" rel="tag"># k8s</a>
+          
+            <a href="/tags/网络/" rel="tag"># 网络</a>
+          
+            <a href="/tags/macvlan/" rel="tag"># macvlan</a>
+          
+            <a href="/tags/flannel/" rel="tag"># flannel</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/05/13/19/" rel="next" title="CoreDNS全解—CoreDNS插件开发入门">
+                <i class="fa fa-chevron-left"></i> CoreDNS全解—CoreDNS插件开发入门
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">国南之境</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">19</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                
+                  <span class="site-state-item-count">24</span>
+                  <span class="site-state-item-name">分类</span>
+                
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">23</span>
+                  <span class="site-state-item-name">标签</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#K8s-虚拟网络（flannel）和-L2-层网络（macvlan）"><span class="nav-number">2.</span> <span class="nav-text">K8s 虚拟网络（flannel）和 L2 层网络（macvlan）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#L2-macvlan-网络"><span class="nav-number">2.1.</span> <span class="nav-text">L2 macvlan 网络</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#flannel-网络"><span class="nav-number">2.2.</span> <span class="nav-text">flannel 网络</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#如果在-L2-层-K8s-网络里引入-flannel-网络，必须理清几个点"><span class="nav-number">3.</span> <span class="nav-text">如果在 L2 层 K8s 网络里引入 flannel 网络，必须理清几个点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#实施方案"><span class="nav-number">4.</span> <span class="nav-text">实施方案</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#方案1：通过-VPN-的方式"><span class="nav-number">4.1.</span> <span class="nav-text">方案1：通过 VPN 的方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#方案2：找几个节点，做路由转发，相当于路由器的角色。"><span class="nav-number">4.2.</span> <span class="nav-text">方案2：找几个节点，做路由转发，相当于路由器的角色。</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#方案3：将-L2-层网络的-K8s-集群的节点，全部加入到虚拟网络-K8s-的网络中。"><span class="nav-number">4.3.</span> <span class="nav-text">方案3：将 L2 层网络的 K8s 集群的节点，全部加入到虚拟网络 K8s 的网络中。</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#最终方案中，要解决及不准备解决的问题"><span class="nav-number">4.4.</span> <span class="nav-text">最终方案中，要解决及不准备解决的问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#最终方案架构"><span class="nav-number">4.5.</span> <span class="nav-text">最终方案架构</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#补充"><span class="nav-number">5.</span> <span class="nav-text">补充</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1、贴一下-L2-层-K8s-节点最终的-CNI-配置"><span class="nav-number">5.1.</span> <span class="nav-text">1、贴一下 L2 层 K8s 节点最终的 CNI 配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2、一些参考"><span class="nav-number">5.2.</span> <span class="nav-text">2、一些参考</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">国南之境</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://cdn.jsdelivr.net/npm/busuanzi@2.3.0/bsz.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("ui3Xsz1h0eom3WtwCf0d87Y6-gzGzoHsz", "WHVHSDeIgaLW1vEhsfWVw403");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
