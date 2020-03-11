@@ -24,8 +24,8 @@
         <category>golang</category>
       </categories>
       <tags>
-        <tag>golang</tag>
         <tag>coredns</tag>
+        <tag>golang</tag>
       </tags>
   </entry>
   <entry>
@@ -143,8 +143,8 @@
       </categories>
       <tags>
         <tag>kubernetes</tag>
-        <tag>coredns</tag>
         <tag>kubedns</tag>
+        <tag>coredns</tag>
       </tags>
   </entry>
   <entry>
@@ -158,8 +158,8 @@
       </categories>
       <tags>
         <tag>kubernetes</tag>
-        <tag>coredns</tag>
         <tag>kubedns</tag>
+        <tag>coredns</tag>
       </tags>
   </entry>
   <entry>
@@ -182,8 +182,8 @@
         <category>kubernetes</category>
       </categories>
       <tags>
-        <tag>docker</tag>
         <tag>kubernetes</tag>
+        <tag>docker</tag>
       </tags>
   </entry>
   <entry>
@@ -195,8 +195,8 @@
         <category>kubernetes</category>
       </categories>
       <tags>
-        <tag>docker</tag>
         <tag>kubernetes</tag>
+        <tag>docker</tag>
       </tags>
   </entry>
   <entry>
@@ -208,8 +208,8 @@
         <category>cAdvisor</category>
       </categories>
       <tags>
-        <tag>docker</tag>
         <tag>kubernetes</tag>
+        <tag>docker</tag>
         <tag>cAdvisor</tag>
       </tags>
   </entry>
