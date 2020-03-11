@@ -91,12 +91,11 @@
 <meta property="og:image" content="http://yoursite.com/2020/03/10/20/E314DEF0202D2C9259CB7B12D0B8584A.jpg">
 <meta property="og:image" content="http://yoursite.com/2020/03/10/20/9C7EBD5A69FA8E52451FDEE6E4C77E58.jpg">
 <meta property="og:image" content="http://yoursite.com/2020/03/10/20/70F56C8B2FEF09C5C5FEAFD70C46C5A0.jpg">
-<meta property="og:image" content="http://yoursite.com/2020/03/10/20/B6759E299718415E3CC828CBC54ADF5F.pdf">
 <meta property="og:image" content="http://yoursite.com/2020/03/10/20/A7D64EC67A4C51719A1EB143060040EB.png">
 <meta property="og:image" content="http://yoursite.com/2020/03/10/20/945CEF4AAD8539720A3E4E0A6719B097.png">
 <meta property="og:image" content="http://yoursite.com/2020/03/10/20/70856BC3866144C085B2FBFF1F3BD649.png">
 <meta property="og:image" content="http://yoursite.com/2020/03/10/20/A541DBAEEE6F6FFC4350BCC381C996DD.jpg">
-<meta property="og:updated_time" content="2020-03-11T02:17:11.764Z">
+<meta property="og:updated_time" content="2020-03-11T09:51:31.132Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="如何打通 K8s 虚拟网络（flannel vxlan 网络）和 K8s 2层网络（macvlan网络）">
 <meta name="twitter:description" content="背景谈论问题，先谈背景。 K8s 在虚拟网络下存在很多问题。比如说：  Pod IP 无法被外部访问，只能在 K8s 集群内访问。直接从实例上无法做到与物理机实例互联互通。 Java 等依赖外部注册中心的服务，如果不放到同一个 K8s 集群里，服务之间无法互访。 复杂场景下，比如：多机房、集群灾备等，需要多 K8s 集群。原生 K8s 集群下，每个集群网络都是虚拟的，多个虚拟网络要互通。如果是 f">
@@ -446,7 +445,7 @@
 <p>可以看到，macvlan 模式下，不论是同主机间的容器互访，还是跨主机间的容器互访，其单位时间内的请求/响应量级都很高，几乎接近主机网络（Native Host）。</p>
 <p>再来看一下吞吐量（容器互访，横坐标为TCP）</p>
 <p><img src="/2020/03/10/20/70F56C8B2FEF09C5C5FEAFD70C46C5A0.jpg" alt=""></p>
-<p>更详细的评测数据，可以参考：<img src="/2020/03/10/20/B6759E299718415E3CC828CBC54ADF5F.pdf" alt="performance of container networking.pdf"></p>
+<p>更详细的评测数据，可以参考：<a href="20/B6759E299718415E3CC828CBC54ADF5F.pdf">performance of container networking.pdf</a></p>
 <p>总的来说，从某个角度看，macvlan 就是要替换 bridge + veth 模式的，就好比，macvtap 就是要替换 bridge + tap 模式的，macvlan 和 macvtap 只是用在场景不同而已。而我们团队，出于性能考虑，目前开发环境、线上环境，CNI 插件都是用 macvlan 做的2层容器网络，IPAM（IP Address Management） 模式，使用的是简单的 host-local（本机分配） 模式（后期要调整）。</p>
 <p>是的。这里提到，“我们团队”。其实，在整个公司中，做 K8s 团队的不止我们一个。其他团队的实施，还主要以 flannel 虚拟网络为主。目前来说，2个团队现在已经整合为一个部门的团队，所以，K8s 基础设施也要统一，恰好，其中重要的一环，就是将现在虚拟网络的 K8s，也改造为 L2 层网络的 K8s 。目的主要有3个：</p>
 <ol>
