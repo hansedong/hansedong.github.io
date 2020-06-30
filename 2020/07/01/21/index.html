@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="k8s,CoreDNS,随机数种子,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="背景公司内的 DNS 服务，是基于 CoreDNS 自研的，最开始只对这个项目做过一次代码 Review（发现过其处理泛域名解析存在逻辑 Bug ）之后，就再也没有参与。而随着公司业务变化，疫情影响，负责这个 DNS 的事情落在我这里。 在此期间，运维那边发现，某个域名配置多个 A 记录之后，只有某一台机器承载了所有请求。后经排查，是所有请求，都打到了 DNS 记录中的第一个。经过测试发现，目前的">
+<meta name="keywords" content="k8s,CoreDNS,随机数种子">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从一次 CoreDNS 插件的优化过程，看随机数种子的作用。">
+<meta property="og:url" content="http://yoursite.com/2020/07/01/21/index.html">
+<meta property="og:site_name" content="国南之境">
+<meta property="og:description" content="背景公司内的 DNS 服务，是基于 CoreDNS 自研的，最开始只对这个项目做过一次代码 Review（发现过其处理泛域名解析存在逻辑 Bug ）之后，就再也没有参与。而随着公司业务变化，疫情影响，负责这个 DNS 的事情落在我这里。 在此期间，运维那边发现，某个域名配置多个 A 记录之后，只有某一台机器承载了所有请求。后经排查，是所有请求，都打到了 DNS 记录中的第一个。经过测试发现，目前的">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://yoursite.com/2020/07/01/21/0B57A2ACFB06B46BC19B68ADFD8228DF.jpg">
+<meta property="og:image" content="http://yoursite.com/2020/07/01/21/c4ca4238a0b923820dcc509a6f75849b.png">
+<meta property="og:image" content="http://yoursite.com/2020/07/01/21/C4223CD2211D6DB0F5B14FD9B1DA6576.jpg">
+<meta property="og:image" content="http://yoursite.com/2020/07/01/21/C6151F8EE7CF4844A5DB1F523B6B1FB8.png">
+<meta property="og:image" content="http://yoursite.com/2020/07/01/21/image2020-6-30_18-15-12.png">
+<meta property="og:image" content="http://yoursite.com/2020/07/01/21/0B57A2ACFB06B46BC19B68ADFD8228DF.png">
+<meta property="og:updated_time" content="2020-06-30T18:10:32.660Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="从一次 CoreDNS 插件的优化过程，看随机数种子的作用。">
+<meta name="twitter:description" content="背景公司内的 DNS 服务，是基于 CoreDNS 自研的，最开始只对这个项目做过一次代码 Review（发现过其处理泛域名解析存在逻辑 Bug ）之后，就再也没有参与。而随着公司业务变化，疫情影响，负责这个 DNS 的事情落在我这里。 在此期间，运维那边发现，某个域名配置多个 A 记录之后，只有某一台机器承载了所有请求。后经排查，是所有请求，都打到了 DNS 记录中的第一个。经过测试发现，目前的">
+<meta name="twitter:image" content="http://yoursite.com/2020/07/01/21/0B57A2ACFB06B46BC19B68ADFD8228DF.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/07/01/21/">
+
+
+
+
+
+  <title>从一次 CoreDNS 插件的优化过程，看随机数种子的作用。 | 国南之境</title>
+  
+
+
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?74a7c642f7a0292e45cc64f132081563";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">国南之境</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/07/01/21/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="国南之境">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="国南之境">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">从一次 CoreDNS 插件的优化过程，看随机数种子的作用。</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-07-01T00:55:32+08:00">
+                2020-07-01
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/CoreDNS/" itemprop="url" rel="index">
+                    <span itemprop="name">CoreDNS</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2020/07/01/21/" class="leancloud_visitors" data-flag-title="从一次 CoreDNS 插件的优化过程，看随机数种子的作用。">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>公司内的 DNS 服务，是基于 CoreDNS 自研的，最开始只对这个项目做过一次代码 Review（发现过其处理泛域名解析存在逻辑 Bug ）之后，就再也没有参与。而随着公司业务变化，疫情影响，负责这个 DNS 的事情落在我这里。</p>
+<p>在此期间，运维那边发现，某个域名配置多个 A 记录之后，只有某一台机器承载了所有请求。后经排查，是所有请求，都打到了 DNS 记录中的第一个。经过测试发现，目前的 DNS 服务确实存在此问题，其自身的 DNS 记录，永远是有序的，也就意味着现有运维架构下的 DNS 服务是无法做负载均衡的，要做负载，其返回的 DNS 记录，必须是随机的。</p>
+<p>经过 2 个小时左右重新梳理这套 DNS 服务源码和架构，迅速做了代码修复，跑了单测，并在 6.24 日（周三），做了一版 DNS 服务更新，不过，此次更新，是更新的办公区网络环境下的 DNS 服务，打算后续观测问题不大，再推到线上。</p>
+<p>而最近 2 天（端午后的 周日、周一）出现多次办公区网络卡顿问题，因不确定是否和此次 CoreDNS 的改动有关。下面是具体的排查流程。</p>
+<h2 id="排查"><a href="#排查" class="headerlink" title="排查"></a>排查</h2><h4 id="1-监控观察"><a href="#1-监控观察" class="headerlink" title="1. 监控观察"></a>1. 监控观察</h4><p>1.1 CoreDNS P99 响应时间</p>
+<p>办公区 DNS 一共 2 台。下面是监控的 DNS 响应时间的 P99 响应耗时截图，从图中可以看出，任何时刻，P99 都是 2.5ms 以下：</p>
+<p><img src="/2020/07/01/21/0B57A2ACFB06B46BC19B68ADFD8228DF.jpg" alt=""></p>
+<p><img src="/2020/07/01/21/c4ca4238a0b923820dcc509a6f75849b.png" alt=""></p>
+<p>1.2 应用自身的内存使用，也没有明显波动</p>
+<p><img src="/2020/07/01/21/C4223CD2211D6DB0F5B14FD9B1DA6576.jpg" alt=""></p>
+<p>1.3 关于 GC 耗时：</p>
+<p><img src="/2020/07/01/21/C6151F8EE7CF4844A5DB1F523B6B1FB8.png" alt=""></p>
+<p>从这个 GC 耗时上看，开发环境的 CoreDNS  耗时，比线上某个节点低很多。所以，如果线上都不存在问题，开发环境这个 CoreDNS 的 GC 就不是问题。</p>
+<p>不过，线上 CoreDNS 服务这个 GC，其实是有点高的，Golang GC 时，会 STW，此期间整个程序都无法响应外部请求。如此来看，线上节点这个 CoreDNS 服务 ，是可能导致业务 DNS 请求耗时高的。而这个线上节点的 P99 响应时间监控都正常，可能是因为 STW 时间段内，一切统计失效，连 metrics 都收集不上来（后续有结果再发文出来）。</p>
+<h4 id="2-性能测试"><a href="#2-性能测试" class="headerlink" title="2. 性能测试"></a>2. 性能测试</h4><p>按照上面监控来看，开发环境 CoreDNS 没什么问题。上次代码调整，其实只是加了一个 shuffle 函数</p>
+<p><img src="/2020/07/01/21/image2020-6-30_18-15-12.png" alt=""></p>
+<p>之前的测试，也只是做了功能测试和单测。也不觉得仅增加一个 shuffle（而且还是 Golang 内置函数）会影响性能。下面补一下加前后的性能对比，性能对比更具说服力。</p>
+<p>其实 shuffle 函数的核心就 2 个：</p>
+<ol>
+<li>生成随机种子</li>
+<li>执行随机</li>
+</ol>
+<p>2.1、<strong>加了随机处理</strong> 的性能测试（2次）</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Benchmark_EtcdCache_GetRandRecords-4      494914             11145 ns/op             224 B/op          3 allocs/op</span><br><span class="line"> </span><br><span class="line">Benchmark_EtcdCache_GetRandRecords-4      525370             11153 ns/op             224 B/op          3 allocs/op</span><br></pre></td></tr></table></figure>
+<p>结果说明：</p>
+<ol>
+<li>平均耗时：11149 纳秒（0.01 毫秒）</li>
+<li>每次 3 次内存分配。</li>
+<li>每次分配内存 224B。</li>
+</ol>
+<p>2.2、<strong>未做随机处理</strong> 的性能测试（2次）</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Benchmark_EtcdCache_GetRandRecords-4    20001678               310 ns/op             224 B/op          3 allocs/op</span><br><span class="line"> </span><br><span class="line">Benchmark_EtcdCache_GetRandRecords-4    19718872               309 ns/op             224 B/op          3 allocs/op</span><br></pre></td></tr></table></figure>
+<p>结果说明：</p>
+<ol>
+<li>平均耗时：310 纳秒（0.0003 毫秒）</li>
+<li>每次 3 次内存分配。</li>
+<li>每次分配内存 224B。</li>
+</ol>
+<p>两次性能测试对比说明：</p>
+<blockquote>
+<p>单次处理时间看，加了随机后，性能慢了 35 倍，也就是慢了 0.01 毫秒。<br>虽然性能测试结果，随机与否，仅相差 0.0.1 毫秒，但需要找出来慢 35 倍的点，到底在什么地方。</p>
+</blockquote>
+<h4 id="3-性能优化"><a href="#3-性能优化" class="headerlink" title="3. 性能优化"></a>3. 性能优化</h4><p>3.1、先看原本的随机，是如何处理的：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">// 打乱 Records 顺序</span><br><span class="line">// 此问题主要修复如果 records 是有序，会导致应用程序，永远只使用DNS第一个record的问题，进而导致 DNS 负载失败</span><br><span class="line">func shuffleRecords(records []msg.Service) &#123;</span><br><span class="line">    if records == nil || len(records) == 0 &#123;</span><br><span class="line">        return</span><br><span class="line">    &#125;</span><br><span class="line">    // 每次 shuffle 之前，先生成一个随机数种子</span><br><span class="line">    rand.Seed(time.Now().UnixNano())</span><br><span class="line">    // 随机处理</span><br><span class="line">    rand.Shuffle(len(records), func(i, j int) &#123;</span><br><span class="line">        records[i], records[j] = records[j], records[i]</span><br><span class="line">    &#125;)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>说明：</p>
+<ol>
+<li>此函数的随机处理，几乎是完全使用 Golang 内置函数 rand.Shuffle。</li>
+<li>每次随机之前，都新播种一个随机数种子。经验告诉我：如果不播种随机数，那么，每次得到的随机值可能是相同的。</li>
+</ol>
+<p>3.2 实测如果不每次做随机种子生成，而是程序初始化的时候只做一次，是否依然随机</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">// 生成随机数在初始化的时候做，且只做一次</span><br><span class="line">func init()&#123;</span><br><span class="line">      rand.Seed(time.Now().UnixNano())</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">// 打乱 Records 顺序</span><br><span class="line">// 此问题主要修复如果 records 是有序，会导致应用程序，永远只使用DNS第一个record的问题，进而导致 DNS 负载失败</span><br><span class="line">func shuffleRecords(records []msg.Service) &#123;</span><br><span class="line">    if records == nil || len(records) == 0 &#123;</span><br><span class="line">        return</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    // 随机处理</span><br><span class="line">    rand.Shuffle(len(records), func(i, j int) &#123;</span><br><span class="line">        records[i], records[j] = records[j], records[i]</span><br><span class="line">    &#125;)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>结论：既然随机（省去贴结果的步骤了）。</p>
+<p>再做一次性能测试：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Benchmark_EtcdCache_GetRandRecords-4    17109836               368 ns/op             224 B/op          3 allocs/op</span><br><span class="line"> </span><br><span class="line">Benchmark_EtcdCache_GetRandRecords-4    16363951               372 ns/op             224 B/op          3 allocs/op</span><br></pre></td></tr></table></figure>
+<p>结果说明：这一次性能提升近 35 倍，相比不做随机处理，性能仅仅多出 60 纳秒（372-312），也就是：0.00006 毫秒。</p>
+<p>另外，除了性能测试外，单测也通过，说明随机是有效的。</p>
+<h4 id="3-引出疑问"><a href="#3-引出疑问" class="headerlink" title="3. 引出疑问"></a>3. 引出疑问</h4><p>很多文章都提到，随机数种子，对随机起了决定性作用。那么，如果仅在程序启动的时候生成一次随机数种子，那么不应该是每次函数调用，得到的随机结果都是一样的嘛，为什么单测的时候，依然能每次获取的结果是随机的呢？</p>
+<p>如果你也有这个疑问，可继续往下看。</p>
+<p>随机数，其实有 2 种：<code>真随机数</code> 和 <code>伪随机数</code></p>
+<p>真随机数</p>
+<blockquote>
+<p>真正的随机数是使用物理现象产生的：比如掷钱币、骰子、转轮、使用电子元件的噪音、核裂变等等，这样的随机数发生器叫做物理性随机数发生器，它们的缺点是技术要求比较高。</p>
+</blockquote>
+<p>伪随机数</p>
+<blockquote>
+<p>真正意义上的随机数（或者随机事件）在某次产生过程中是按照实验过程中表现的分布概率随机产生的，其结果是不可预测的，是不可见的。而计算机中的随机函数是按照一定算法模拟产生的，其结果是确定的，是可见的。我们可以这样认为这个可预见的结果其出现的概率是100%。所以用计算机随机函数所产生的“随机数”并不随机，是伪随机数。</p>
+</blockquote>
+<p>所谓随机数，其实是伪随机数，所谓的‘伪’，意思是这些数其实是有规律的，只不过因为算法规律太复杂，很难看出来而已。而，再厉害的算法，如果没有一个初始值，它也不可能凭空造出一系列随机数来，我们说的 <code>随机数种子</code> 就是这个初始值。</p>
+<p>随机数的生成过程：</p>
+<blockquote>
+<p>随机数是这样生成的：我们将这套复杂的算法（是叫随机数生成器吧）看成一个黑盒，把我们准备好的种子扔进去，它会返给你两个东西，一个是你想要的随机数，另一个是保证能生成下一个随机数的新的种子，把新的种子放进黑盒，又得到一个新的随机数和一个新的种子，从此可以不断的生成新的随机数。</p>
+</blockquote>
+<p>总结来说，程序启动的时候，仅需要一个随机数种子，进行一次随机后，会自动生成新的随机数种子以保证下次随机操作的结果可以生成新的随机数。</p>
+<p>因此，回到之前的程序上，其实我们并不需要在执行 rand.Shuffle 之前每次都生成一遍新的随机数种子，这个操作一定程度上说，对性能是有一些影响的。</p>
+<p>而前面提到，随机数种子固定，随机结果固定，指的是横向角度。也就是说，只要随机数种子是一样的，纵向来看，的确每次随机的结果是不同的，但横向来看，所有的随机结果的确是相同的，如图：</p>
+<p><img src="/2020/07/01/21/0B57A2ACFB06B46BC19B68ADFD8228DF.png" alt=""></p>
+<p>可以看到：</p>
+<ol>
+<li>纵向来看，每次结果，的确是随机了——随机数种子生成一次，后续每次随机操作的结果，均随机。</li>
+<li>横向对比第一次执行和第二次执行的，每一次随机结果，是完全一样的——随机数种子固定，随机结果固定可复现。</li>
+</ol>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>Donate comment here</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>打赏</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.png" alt="国南之境 微信支付">
+        <p>微信支付</p>
+      </div>
+    
+
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/k8s/" rel="tag"># k8s</a>
+          
+            <a href="/tags/CoreDNS/" rel="tag"># CoreDNS</a>
+          
+            <a href="/tags/随机数种子/" rel="tag"># 随机数种子</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/03/10/20/" rel="next" title="如何打通 K8s 虚拟网络（flannel vxlan 网络）和 K8s 2层网络（macvlan网络）">
+                <i class="fa fa-chevron-left"></i> 如何打通 K8s 虚拟网络（flannel vxlan 网络）和 K8s 2层网络（macvlan网络）
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">国南之境</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">20</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                
+                  <span class="site-state-item-count">25</span>
+                  <span class="site-state-item-name">分类</span>
+                
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">25</span>
+                  <span class="site-state-item-name">标签</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#排查"><span class="nav-number">2.</span> <span class="nav-text">排查</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-监控观察"><span class="nav-number">2.0.1.</span> <span class="nav-text">1. 监控观察</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-性能测试"><span class="nav-number">2.0.2.</span> <span class="nav-text">2. 性能测试</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-性能优化"><span class="nav-number">2.0.3.</span> <span class="nav-text">3. 性能优化</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-引出疑问"><span class="nav-number">2.0.4.</span> <span class="nav-text">3. 引出疑问</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">国南之境</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://cdn.jsdelivr.net/npm/busuanzi@2.3.0/bsz.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("ui3Xsz1h0eom3WtwCf0d87Y6-gzGzoHsz", "WHVHSDeIgaLW1vEhsfWVw403");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
