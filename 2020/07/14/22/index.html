@@ -88,7 +88,7 @@
 <meta property="og:description" content="背景有 2 个 K8s 集群， 网络模式不同，集群1 是虚拟网络 K8s（flannel vxlan）、集群2 是 L2 层网络 K8s（macvlan），之前，对 2 个集群的架构，做了调整，打通了 2 个集群的容器网络，做了互联互通（容器间可以跨集群网络调用）。 然后，很多服务，需要从集群1，迁移到集群2，最终目的就是容器部署在 L2 层网络 K8s 集群。 在迁移过程中，遇到一个问题，表现为">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="http://yoursite.com/2020/07/14/22/3F3678279B81EEDEB5CED055ED1180CF.jpg">
-<meta property="og:updated_time" content="2020-07-13T17:30:29.680Z">
+<meta property="og:updated_time" content="2020-07-13T17:34:33.687Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="一次关于 TCP 建连，偶尔会失败的问题分析">
 <meta name="twitter:description" content="背景有 2 个 K8s 集群， 网络模式不同，集群1 是虚拟网络 K8s（flannel vxlan）、集群2 是 L2 层网络 K8s（macvlan），之前，对 2 个集群的架构，做了调整，打通了 2 个集群的容器网络，做了互联互通（容器间可以跨集群网络调用）。 然后，很多服务，需要从集群1，迁移到集群2，最终目的就是容器部署在 L2 层网络 K8s 集群。 在迁移过程中，遇到一个问题，表现为">
@@ -414,7 +414,7 @@
 <li>ping 没有任何问题，一直都能通。</li>
 <li>但是，telnet 10.151.11.172 8990 偶尔不通。</li>
 </ol>
-<h2 id="过程分析"><a href="#过程分析" class="headerlink" title="过程分析"></a>过程分析</h2><h5 id="1、抓包"><a href="#1、抓包" class="headerlink" title="1、抓包"></a>1、抓包</h5><p>从虚拟网络容器发出，请求目标容器</p>
+<h2 id="过程分析"><a href="#过程分析" class="headerlink" title="过程分析"></a>过程分析</h2><h4 id="1、抓包"><a href="#1、抓包" class="headerlink" title="1、抓包"></a>1、抓包</h4><p>从虚拟网络容器发出，请求目标容器</p>
 <ol>
 <li>src：10.144.76.9</li>
 <li>dst：10.151.11.172:8990</li>
@@ -425,7 +425,7 @@
 <blockquote>
 <p>结论：目标容器收到了 SYN 包，但是没有回包！</p>
 </blockquote>
-<h5 id="2、验证-Java-服务是否正常"><a href="#2、验证-Java-服务是否正常" class="headerlink" title="2、验证 Java 服务是否正常"></a>2、验证 Java 服务是否正常</h5><p>虽然从抓包来看，容器没回包做 ACK，但是可以抓包请求报文 SYN。另外，ping 没有问题，从这一层，猜测容器网络应该是正常的。可能是 Java 服务本身有问题。因为服务在高负载等情况下，是可能因为繁忙，无法处理正常 socket accept。</p>
+<h4 id="2、验证-Java-服务是否正常"><a href="#2、验证-Java-服务是否正常" class="headerlink" title="2、验证 Java 服务是否正常"></a>2、验证 Java 服务是否正常</h4><p>虽然从抓包来看，容器没回包做 ACK，但是可以抓包请求报文 SYN。另外，ping 没有问题，从这一层，猜测容器网络应该是正常的。可能是 Java 服务本身有问题。因为服务在高负载等情况下，是可能因为繁忙，无法处理正常 socket accept。</p>
 <p>Java 服务监听的 8990 端口，也监听了 1234 端口。</p>
 <p>在源容器无法 telnet 目标容器 8990 端口时，尝试 telnet 1234 端口，发现也不通。</p>
 <p>为了验证到底是否为 Java 服务本身问题。在 Java 容器网络下（通过 nsenter 进入容器网络），起一个 golang 的 HTTP Server，相当于 Java 服务 + Golang 服务共用容器网络，但是 Golang 服务进程，不在 Java 服务的容器环境里（因此，不受 Cgroup 约束，直接使用宿主机资源）。</p>
@@ -440,7 +440,7 @@
 <blockquote>
 <p>结论：和 Java 服务，无关！</p>
 </blockquote>
-<h5 id="3、不是-server-服务问题，可能就是-server-的操作系统问题"><a href="#3、不是-server-服务问题，可能就是-server-的操作系统问题" class="headerlink" title="3、不是 server 服务问题，可能就是 server 的操作系统问题"></a>3、不是 server 服务问题，可能就是 server 的操作系统问题</h5><p>google，找到一些文章，说是，如果机器，在内核中，如果同时开启了下面 2 个内核参数，可能会导致 TCP 建联过程中，Server 端不做 ACK！</p>
+<h4 id="3、不是-server-服务问题，可能就是-server-的操作系统问题"><a href="#3、不是-server-服务问题，可能就是-server-的操作系统问题" class="headerlink" title="3、不是 server 服务问题，可能就是 server 的操作系统问题"></a>3、不是 server 服务问题，可能就是 server 的操作系统问题</h4><p>google，找到一些文章，说是，如果机器，在内核中，如果同时开启了下面 2 个内核参数，可能会导致 TCP 建联过程中，Server 端不做 ACK！</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">net.ipv4.tcp_tw_recycle</span><br><span class="line">net.ipv4.tcp_timestamps</span><br></pre></td></tr></table></figure>
 <p>Server 端当 <code>tcp_tw_recycle</code> 和 <code>tcp_timestamps</code> 都是1的时候，Server 端，会检查收到数据包 TCP 选项字段中的 timestamp（TS Value），当来自同一个IP地址（任意源端口号）后来的数据包中TCP选项字段如果有 timestamp 且比前面的数据包中的 timestamp 小，则 Server不做 ACK 响应。</p>
 <p>查看了一下，在目标容器所在的主机，进入目标容器网络，看下的 reject 包</p>
@@ -455,12 +455,12 @@
 <blockquote>
 <p>结论<br>1、Server 端所在物理机内核参数问题。<br>2、Linux Server 端内核，不要同时开启 <code>tcp_timestamps</code>、<code>tcp_tw_recycle</code> 以防止 TCP 建连失败。</p>
 </blockquote>
-<h5 id="4、疑惑解读"><a href="#4、疑惑解读" class="headerlink" title="4、疑惑解读"></a>4、疑惑解读</h5><p>为什么 ping 可以，telnet 不行？</p>
+<h4 id="4、疑惑解读"><a href="#4、疑惑解读" class="headerlink" title="4、疑惑解读"></a>4、疑惑解读</h4><p>为什么 ping 可以，telnet 不行？</p>
 <p>是因为，ping ，是 ICMP 报文，ICMP 是无链接协议。telnet 是基于 TCP 的，TCP 是链接协议。</p>
 <p>而上面的 <code>tcp_tw_recycle</code>、<code>tcp_timestamps</code> 都是针对 TCP 的，所以，reject 的报文的时候，也是 reject TCP 报文。</p>
 <p>因此，表现为 ping 一直是通的，telnet 偶尔不通。</p>
-<h2 id="扩展"><a href="#扩展" class="headerlink" title="扩展"></a>扩展</h2><h5 id="tcp-tw-recycle-tcp-timestamps-的用途"><a href="#tcp-tw-recycle-tcp-timestamps-的用途" class="headerlink" title="tcp_tw_recycle + tcp_timestamps 的用途"></a>tcp_tw_recycle + tcp_timestamps 的用途</h5><p>Server 端当 <code>tcp_tw_recycle</code> 和 <code>tcp_timestamps</code> 这 2 个内核参数的值都是 1 的时候，Server 端，会检查收到数据包 TCP 选项字段中的的 timestamp（TS Value），当来自同一个 IP 地址（任意源端口号）后来的数据包中 TCP 选项字段如果有 timestamp 且比前面的数据包中的 timestamp 小，则Server不做 ACK 响应。</p>
-<h5 id="net-ipv4-tcp-timestamps"><a href="#net-ipv4-tcp-timestamps" class="headerlink" title="net.ipv4.tcp_timestamps"></a>net.ipv4.tcp_timestamps</h5><p>tcp_timestamps 的本质是记录数据包的发送时间。基本的步骤如下：</p>
+<h2 id="扩展"><a href="#扩展" class="headerlink" title="扩展"></a>扩展</h2><h4 id="tcp-tw-recycle-tcp-timestamps-的用途"><a href="#tcp-tw-recycle-tcp-timestamps-的用途" class="headerlink" title="tcp_tw_recycle + tcp_timestamps 的用途"></a>tcp_tw_recycle + tcp_timestamps 的用途</h4><p>Server 端当 <code>tcp_tw_recycle</code> 和 <code>tcp_timestamps</code> 这 2 个内核参数的值都是 1 的时候，Server 端，会检查收到数据包 TCP 选项字段中的的 timestamp（TS Value），当来自同一个 IP 地址（任意源端口号）后来的数据包中 TCP 选项字段如果有 timestamp 且比前面的数据包中的 timestamp 小，则Server不做 ACK 响应。</p>
+<h4 id="net-ipv4-tcp-timestamps"><a href="#net-ipv4-tcp-timestamps" class="headerlink" title="net.ipv4.tcp_timestamps"></a>net.ipv4.tcp_timestamps</h4><p>tcp_timestamps 的本质是记录数据包的发送时间。基本的步骤如下：</p>
 <ol>
 <li>发送方在发送数据时，将一个 timestamp (表示发送时间)放在包里面</li>
 <li>接收方在收到数据包后，在对应的 ACK 包中将收到的timestamp 返回给发送方(echo back)</li>
@@ -468,7 +468,7 @@
 </ol>
 <p>timestamps 是一个双向的选项，当一方不开启时，两方都将停用 timestamps。</p>
 <p>比如 Client 端发送的 SYN 包中带有 timestamp 选项，但 Server 端并没有开启该选项。则回复的 SYN-ACK 将不带 timestamp 选项，同时 Client 后续回复的 ACK 也不会带有 timestamp 选项。当然，如果 Client 发送的 SYN 包中就不带 timestamp ，双向都将停用 timestamp。</p>
-<h5 id="net-ipv4-tcp-tw-recycle"><a href="#net-ipv4-tcp-tw-recycle" class="headerlink" title="net.ipv4.tcp_tw_recycle"></a>net.ipv4.tcp_tw_recycle</h5><p><code>tcp_tw_recycle</code> 主要是解决 TIME_WAIT 的问题。TIME_WAIT 多会有什么问题？</p>
+<h4 id="net-ipv4-tcp-tw-recycle"><a href="#net-ipv4-tcp-tw-recycle" class="headerlink" title="net.ipv4.tcp_tw_recycle"></a>net.ipv4.tcp_tw_recycle</h4><p><code>tcp_tw_recycle</code> 主要是解决 TIME_WAIT 的问题。TIME_WAIT 多会有什么问题？</p>
 <p>其实，TIME_WAIT 这个状态，出现在主动端口 TCP 链接，也就是主动对 TCP 链接做 Close 的那一端。TIME_WAIT 占用的1分钟时间内，相同四元组(源地址，源端口，目标地址，目标端口)的连接无法创建。</p>
 <p>主动 Close TCP 的那一端一般都是 Client 端，Server 端主动 Close 的情况比较少（也有，比如 MySQL 主动断开链接）。所以，客户端能用的端口，一般是 <code>net.ipv4.ip_local_port_range</code> 指定的 32768-61000 ，故而，TIME_WAIT 可能导致这个范围的端口被占用而慢慢耗尽。耗尽之后，就不能再主动发起 TCP 链接了。</p>
 <p>为解决此问题，Linux 引入了 <code>tcp_tw_recycle</code> （本文提及的）和 <code>tcp_tw_reuse</code> 。而且，这俩，都要和 <code>tcp_timestamps</code> 一起来使用（这几个都需要手动开启，默认是关闭的，也就是值为 0 ）。</p>
@@ -499,7 +499,7 @@
 </table>
 <p>综合来看，<code>tcp_tw_reuse</code> + <code>tcp_timestamps</code> 更安全一些。</p>
 <p>另外，Linux 从 4.10 内核开始，官方修改了时间戳的生成机制。在这种情况下，无论任何时候，tcp_tw_recycle 都不应该开启。tcp_tw_reuse 选项仍然可用，在某些情况下，可以考虑打开。</p>
-<h5 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h5><ul>
+<h4 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h4><ul>
 <li><p><a href="https://mp.weixin.qq.com/s?__biz=MzUxMDQxMDMyNg==&amp;mid=2247484841&amp;idx=1&amp;sn=7e0923ea9204e126003e263dc8414261&amp;chksm=f9022e90ce75a7865a985ddfb02016949b0c36a02f8fb805c957699ba64144682b9b40d58a1c&amp;token=1111806335&amp;lang=zh_CN#rd" target="_blank" rel="noopener">https://mp.weixin.qq.com/s?__biz=MzUxMDQxMDMyNg==&amp;mid=2247484841&amp;idx=1&amp;sn=7e0923ea9204e126003e263dc8414261&amp;chksm=f9022e90ce75a7865a985ddfb02016949b0c36a02f8fb805c957699ba64144682b9b40d58a1c&amp;token=1111806335&amp;lang=zh_CN#rd</a></p>
 </li>
 <li><p><a href="https://www.jianshu.com/p/cb9c4a1a98af" target="_blank" rel="noopener">https://www.jianshu.com/p/cb9c4a1a98af</a></p>
@@ -703,7 +703,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#过程分析"><span class="nav-number">2.</span> <span class="nav-text">过程分析</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#1、抓包"><span class="nav-number">2.0.0.1.</span> <span class="nav-text">1、抓包</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#2、验证-Java-服务是否正常"><span class="nav-number">2.0.0.2.</span> <span class="nav-text">2、验证 Java 服务是否正常</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#3、不是-server-服务问题，可能就是-server-的操作系统问题"><span class="nav-number">2.0.0.3.</span> <span class="nav-text">3、不是 server 服务问题，可能就是 server 的操作系统问题</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#4、疑惑解读"><span class="nav-number">2.0.0.4.</span> <span class="nav-text">4、疑惑解读</span></a></li></ol></li></ol><li class="nav-item nav-level-2"><a class="nav-link" href="#扩展"><span class="nav-number">3.</span> <span class="nav-text">扩展</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#tcp-tw-recycle-tcp-timestamps-的用途"><span class="nav-number">3.0.0.1.</span> <span class="nav-text">tcp_tw_recycle + tcp_timestamps 的用途</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#net-ipv4-tcp-timestamps"><span class="nav-number">3.0.0.2.</span> <span class="nav-text">net.ipv4.tcp_timestamps</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#net-ipv4-tcp-tw-recycle"><span class="nav-number">3.0.0.3.</span> <span class="nav-text">net.ipv4.tcp_tw_recycle</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#参考"><span class="nav-number">3.0.0.4.</span> <span class="nav-text">参考</span></a></li></ol></li></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#过程分析"><span class="nav-number">2.</span> <span class="nav-text">过程分析</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1、抓包"><span class="nav-number">2.0.1.</span> <span class="nav-text">1、抓包</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2、验证-Java-服务是否正常"><span class="nav-number">2.0.2.</span> <span class="nav-text">2、验证 Java 服务是否正常</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3、不是-server-服务问题，可能就是-server-的操作系统问题"><span class="nav-number">2.0.3.</span> <span class="nav-text">3、不是 server 服务问题，可能就是 server 的操作系统问题</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4、疑惑解读"><span class="nav-number">2.0.4.</span> <span class="nav-text">4、疑惑解读</span></a></li></ol></li></ol><li class="nav-item nav-level-2"><a class="nav-link" href="#扩展"><span class="nav-number">3.</span> <span class="nav-text">扩展</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#tcp-tw-recycle-tcp-timestamps-的用途"><span class="nav-number">3.0.1.</span> <span class="nav-text">tcp_tw_recycle + tcp_timestamps 的用途</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#net-ipv4-tcp-timestamps"><span class="nav-number">3.0.2.</span> <span class="nav-text">net.ipv4.tcp_timestamps</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#net-ipv4-tcp-tw-recycle"><span class="nav-number">3.0.3.</span> <span class="nav-text">net.ipv4.tcp_tw_recycle</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#参考"><span class="nav-number">3.0.4.</span> <span class="nav-text">参考</span></a></li></ol></li></div>
             
 
           </div>
