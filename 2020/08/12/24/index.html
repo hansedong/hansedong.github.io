@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="k8s,Drone,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="背景微服务的最基本基础，就是 CICD，CI 的交付产物是制品。制品有很多属性，比如环境、版本等。从这个抽象上来看，如果微服务是基于 K8s + docker 的话，那么，docker image 是制品的一种具象化的表现。同样，如果微服务并不基于 docker 和 K8s，那么，制品也可以是其他具体表现，比如 tar 包。 如果是基于 K8s + docker 的话，CI 最终交付的制品，应该是">
+<meta name="keywords" content="k8s,Drone">
+<meta property="og:type" content="article">
+<meta property="og:title" content="源码追查 Drone 开源系统中的 socket 泄漏问题">
+<meta property="og:url" content="http://yoursite.com/2020/08/12/24/index.html">
+<meta property="og:site_name" content="国南之境">
+<meta property="og:description" content="背景微服务的最基本基础，就是 CICD，CI 的交付产物是制品。制品有很多属性，比如环境、版本等。从这个抽象上来看，如果微服务是基于 K8s + docker 的话，那么，docker image 是制品的一种具象化的表现。同样，如果微服务并不基于 docker 和 K8s，那么，制品也可以是其他具体表现，比如 tar 包。 如果是基于 K8s + docker 的话，CI 最终交付的制品，应该是">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2020-08-12T13:49:27.807Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="源码追查 Drone 开源系统中的 socket 泄漏问题">
+<meta name="twitter:description" content="背景微服务的最基本基础，就是 CICD，CI 的交付产物是制品。制品有很多属性，比如环境、版本等。从这个抽象上来看，如果微服务是基于 K8s + docker 的话，那么，docker image 是制品的一种具象化的表现。同样，如果微服务并不基于 docker 和 K8s，那么，制品也可以是其他具体表现，比如 tar 包。 如果是基于 K8s + docker 的话，CI 最终交付的制品，应该是">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/08/12/24/">
+
+
+
+
+
+  <title>源码追查 Drone 开源系统中的 socket 泄漏问题 | 国南之境</title>
+  
+
+
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?74a7c642f7a0292e45cc64f132081563";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">国南之境</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/08/12/24/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="国南之境">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="国南之境">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">源码追查 Drone 开源系统中的 socket 泄漏问题</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-08-12T21:41:18+08:00">
+                2020-08-12
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/Drone/" itemprop="url" rel="index">
+                    <span itemprop="name">Drone</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/Drone/k8s/" itemprop="url" rel="index">
+                    <span itemprop="name">k8s</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2020/08/12/24/" class="leancloud_visitors" data-flag-title="源码追查 Drone 开源系统中的 socket 泄漏问题">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>微服务的最基本基础，就是 CICD，CI 的交付产物是制品。制品有很多属性，比如环境、版本等。从这个抽象上来看，如果微服务是基于 K8s + docker 的话，那么，docker image 是制品的一种具象化的表现。同样，如果微服务并不基于 docker 和 K8s，那么，制品也可以是其他具体表现，比如 tar 包。</p>
+<p>如果是基于 K8s + docker 的话，CI 最终交付的制品，应该是 docker 镜像。所以，如何构建镜像，就有的选了，比如：Jenkins、Gitlab CI、Drone、或者基于 K8s 的 Pod （init containers）的 Knative 等。个人认为，Gitlab CI 与 Gitlab 耦合太强，无法作为一个通用的构建中心独立出来。所以，Jenkins、Drone、Knative 等这几个系统，都可以按照团队喜好自建。但不论哪种方式，一个底线始终不变：必须能从原理层了解选型系统，并且，出了问题，最好可以从源码层定位和捕捉问题。</p>
+<p>综合来看，Drone 既有 Pipeline 模型，又有插件化设计、基于 Golang，非常轻量，所以最终将其作为构建系统的核心底层设施。</p>
+<p>Drone 是开源的，基于 Golang + Docker 的，也是目前 CNCF 云原生体系下的一个项目。</p>
+<p>Drone 这套系统在我们公司，通过服务化交付运行近 3 年，非常稳定。由于使用 Drone 较早，目前使用的是 0.8.10 版本，后来准备使用 1.x 版本时，由于官方代码质量还严重不过关，有一堆问题，因此最终将版本，固定在了 1.x 之前的最后一个版本，也就是 0.8.10 。</p>
+<p>然而，最近在排查某个问题的时候，发现 Drone 的 worker 节点上的组件进程 drone-agent 存在 socket 泄露问题。下面就是针对这个问题的一个排查过程。</p>
+<blockquote>
+<p>提前剧透：最后的修复方式，是通过修改源码解决的，但是因为版本较早，截止目前，Drone 已经到了 v1.9.0 版本，之前版本，官方也不再管理和维护了。因此最终是通过直接修改 vendor 包的第三方库来解决。<br>另外，也顺便吐槽一下，Drone 官方维护者对 Drone 的权限收敛过大，对社区里的外部成员接纳程度不太高，在开源这个事情上的氛围差一些（这个问题也有人在社区论坛吐槽过）。</p>
+</blockquote>
+<h2 id="现存问题"><a href="#现存问题" class="headerlink" title="现存问题"></a>现存问题</h2><h4 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h4><p>在查看 drone 的 worker 节点的健康状态时，发现其 worker 节点的工作组件 drone-agent 有大量链接，经排查，其数量达到了 18000+ 个，非常多。然而，查看其链接类型时，发现，几乎都是 unix domain socket 链接。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[root@node002145 xxx]<span class="meta"># netstat -apn |grep 9329</span></span><br><span class="line">tcp        <span class="number">0</span>      <span class="number">0</span> <span class="number">192.168</span>.x.x:<span class="number">62028</span>     <span class="number">192.168</span>.x.xx:<span class="number">6666</span>      ESTABLISHED <span class="number">9329</span>/drone-agent    </span><br><span class="line">tcp6       <span class="number">0</span>      <span class="number">0</span> :::<span class="number">3000</span>                 :::*                    LISTEN      <span class="number">9329</span>/drone-agent    </span><br><span class="line">unix  <span class="number">3</span>      [ ]         STREAM     CONNECTED     <span class="number">5004600</span>  <span class="number">9329</span>/drone-agent     </span><br><span class="line">unix  <span class="number">3</span>      [ ]         STREAM     CONNECTED     <span class="number">151467</span>   <span class="number">9329</span>/drone-agent     </span><br><span class="line">unix  <span class="number">3</span>      [ ]         STREAM     CONNECTED     <span class="number">215488</span>   <span class="number">9329</span>/drone-agent     </span><br><span class="line">unix  <span class="number">3</span>      [ ]         STREAM     CONNECTED     <span class="number">234425</span>   <span class="number">9329</span>/drone-agent   </span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<h4 id="drone"><a href="#drone" class="headerlink" title="drone"></a>drone</h4><p>drone 本身，是 CNCF 一个项目，主要是基于 docker 的 pipeline 引擎。可以替代 Jenkins、GitlabCI 执行构建过程，非常灵活。</p>
+<p>而 drone 是 master-slave 架构，slave 节点是执行 pipeline 的节点，执行组件为 drone-agent。由于 drone 是基于 docker 的，所以，drone-agent 组件需要与其节点上的 dockerd 执行通信，告知 docker 要起什么容器、执行上面命令等等。</p>
+<p>所以，这 18000+ 个 连接，其实便是 drone-agent 与 dockerd 的链接。那么，如何验证呢？其实很简单，我们上面执行 netstat -apn ，grep 的是 drone-agent 的进程。反过来，我们 grep dockerd 的进程，也是一样的 18000+。</p>
+<p>至于为什么是 uninx domain socket ，而不是 TCP socket，是因为 drone-agent 与 dockerd 通信，走的就是 dockerd 服务默认的 unix domain socket server 。</p>
+<p>这是 drone-agent 的启动方式：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">usr/bin/docker run --net=host --memory=<span class="number">10</span>G --name=drone-agent -v /var/run/docker.sock:/var/run/docker.sock hub.xxx.com/paas/xxx/drone-agent:v1<span class="number">.0</span><span class="number">.2</span></span><br></pre></td></tr></table></figure>
+<p>可以看到，drone-agent 的启动，是要把主机上的 /var/run/docker.sock，挂载到 drone-agent 的容器内的。</p>
+<h4 id="这个问题，有什么影响？"><a href="#这个问题，有什么影响？" class="headerlink" title="这个问题，有什么影响？"></a>这个问题，有什么影响？</h4><p>由于操作系统中，进程能打开的文件句柄数量有限，而 TCP 链接本质还是一个 socket，也是要占用句柄数量的，虽然连接数有数量上限，且可通过 ulimit 配置，但是，只要有泄露问题，就还是有可能触发 “too many open files” 错误的。</p>
+<h2 id="排查"><a href="#排查" class="headerlink" title="排查"></a>排查</h2><p>drone-agent 有 dockerd 之间的 socket 未释放，肯定是 drone-agent 未合理的关闭链接导致。</p>
+<h4 id="复现问题"><a href="#复现问题" class="headerlink" title="复现问题"></a>复现问题</h4><p>先看一下，当前的 docker 数量，以及 drone-agent 的 unix domain socket 数量</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Every <span class="number">0.3</span>s: docker ps &amp;&amp; netstat -apn |grep drone-agent|wc -l                                                                                                                                                                                           Mon Aug <span class="number">10</span> <span class="number">14</span>:<span class="number">52</span>:<span class="number">11</span> <span class="number">2020</span></span><br><span class="line"></span><br><span class="line">CONTAINER ID        IMAGE                                        COMMAND                  CREATED             STATUS              PORTS               NAMES</span><br><span class="line">a58ad55546a7        hub.xxx.com/paas/xxx/drone-agent:v1<span class="number">.0</span><span class="number">.2</span>   <span class="string">"/bin/sh -c '/usr/bi…"</span>   <span class="number">3</span> days ago          Up <span class="number">3</span> days                               drone-agent</span><br><span class="line"><span class="number">126</span></span><br></pre></td></tr></table></figure>
+<p>触发一次构建过程，再观察</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Every <span class="number">0.3</span>s: docker ps &amp;&amp; netstat -apn |grep drone-agent|wc -l                                                                                                                                                                                           Mon Aug <span class="number">10</span> <span class="number">14</span>:<span class="number">55</span>:<span class="number">11</span> <span class="number">2020</span></span><br><span class="line"></span><br><span class="line">CONTAINER ID        IMAGE                                        COMMAND                  CREATED             STATUS              PORTS               NAMES</span><br><span class="line"><span class="number">5483</span>dd82b3f5        hub.xxx.com/paas/golang:<span class="number">1.14</span><span class="number">.4</span>     	 <span class="string">"/bin/sh -c 'echo $C…"</span>   <span class="number">12</span> seconds ago      Up <span class="number">11</span> seconds                           <span class="number">0</span>_3359634489227731582_step_0</span><br><span class="line">a58ad55546a7        hub.xxx.com/paas/xxx/drone-agent:v1<span class="number">.0</span><span class="number">.2</span>   <span class="string">"/bin/sh -c '/usr/bi…"</span>   <span class="number">3</span> days ago          Up <span class="number">3</span> days                               drone-agent</span><br><span class="line"><span class="number">128</span></span><br></pre></td></tr></table></figure>
+<p>可以看到，一次构建触发，涨了 2 个 socket 链接，且不会释放</p>
+<h4 id="创建独立的-drone-agent-节点做测试"><a href="#创建独立的-drone-agent-节点做测试" class="headerlink" title="创建独立的 drone-agent 节点做测试"></a>创建独立的 drone-agent 节点做测试</h4><p>现在，构建系统是 1 个 drone-server + 2 个 drone-agent ，也就是 2 个worker 节点。之所以要创建一个独立的 drone-agent 节点，其目的是，作为我们的测试节点，且不影响现有的构建系统的征程工作。换句话说，我们要测试一些构建，这些构建，只在特定的 drone-agent 上跑。</p>
+<p>这就要用到 Drone 的特性：节点选择特性：platform（可以理解为 K8s 体系的 NodeSelector 能力）。</p>
+<p>①：首先，找一台机器，部署 drone-agent ，并给这个 drone-agent 指定 platform，由于 drone-agent 我们是 docker 启动的，故而，可参考如下 Dockerfile，构建一个新的 drone-agent 镜像</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">FROM hub.xxx.com/paas/centos:<span class="number">7.5</span><span class="number">.1804</span></span><br><span class="line">COPY release/drone-agent /usr/bin</span><br><span class="line">ENV TZ='Asia/Shanghai'</span><br><span class="line">ENTRYPOINT /usr/bin/drone-agent --server=<span class="number">192.168</span><span class="number">.2</span><span class="number">.146</span>:<span class="number">6666</span> --password=<span class="number">22222</span> --debug=<span class="literal">true</span> --max-procs=<span class="number">10</span> --platform=kvm/amd64</span><br></pre></td></tr></table></figure>
+<p>构建完之后，启动此镜像，这个 drone 的 agent 就成了一个特殊的 agent 了，其他构建，漂移不过来的。</p>
+<blockquote>
+<p>之所以漂移不到这个 agent 节点，是因为，这个 agent 的节点，platform 指定的是 “kvm/amd64”，其他 agent 节点，默认的 platform 是 “linux/amd64” ，而最关键的是，一般的构建，默认其实指定了 platform 为 “linux/amd64”。</p>
+</blockquote>
+<p>②：找一个需要构建的项目，配置 .drone.yml ，及 Dockerfile</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">workspace:</span><br><span class="line">  base: /go/</span><br><span class="line"></span><br><span class="line">clone:</span><br><span class="line">  git:</span><br><span class="line">    image: hub.xxx.com/paas/drone-plugin-git:latest</span><br><span class="line">    network_mode: host</span><br><span class="line"></span><br><span class="line">pipeline:</span><br><span class="line">  go-build:</span><br><span class="line">    image: hub.xxx.com/paas/golang:<span class="number">1.14</span><span class="number">.4</span></span><br><span class="line">    network_mode: host</span><br><span class="line">    environment:</span><br><span class="line">      GOPROXY: https:<span class="comment">//goproxy.cn</span></span><br><span class="line">      GOPRIVATE: gitlab.xxx.com</span><br><span class="line">    commands:</span><br><span class="line">      - make</span><br><span class="line">    volumes:</span><br><span class="line">      - /DATA/golang-mod/mod:/go/pkg/mod</span><br><span class="line">  build-image:</span><br><span class="line">    image: hub.xxx.com/paas/drone-docker:v0<span class="number">.5</span><span class="number">.7</span></span><br><span class="line">    purge: <span class="literal">false</span></span><br><span class="line">    repo: hub.xxx.com/mtest/gowebsocketdemo</span><br><span class="line">    volumes:</span><br><span class="line">      - /var/run/docker.sock:/var/run/docker.sock</span><br><span class="line">    network_mode: host</span><br><span class="line">    auth_config:</span><br><span class="line">      innerid: hub.xxx.com</span><br><span class="line">    auth_config_innerid: hub.xxx.com</span><br><span class="line"></span><br><span class="line">platform: kvm/amd64</span><br></pre></td></tr></table></figure>
+<p>③：测试构建</p>
+<p>为这个 gowebsocketdemo 配置了如上 .drone.yml 后，提交 tag 触发自动构建，总会漂移到这个 agent 节点上，不会漂移到其他 agent 节点。</p>
+<h4 id="代码层初步排查"><a href="#代码层初步排查" class="headerlink" title="代码层初步排查"></a>代码层初步排查</h4><p>万事具备，后边，我们调试 drone-agent ，只需要在之前的特殊节点起停 drone-agent 服务测试即可，不会影响到主业务。</p>
+<p>从之前的分析看，drone-agent 在执行 pipeline 的时候，很短的时间，就起了 2 个 unix domain socket，它后边分步执行 pipeline 的时候，socket 数量并没有什么变化。这可能说明，unix domain socket 的建立，可能是在执行 pipeline 之前就已经开始了。为了验证这个问题，先梳理一下 drone-agent 执行 pipeline 的基本代码结构：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// drone-agent 执行任务的逻辑</span></span><br><span class="line"></span><br><span class="line">func (r *runner) run(ctx context.Context) error &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 从队列取一个任务</span></span><br><span class="line">    work, err := r.client.Next(ctx, r.filter)</span><br><span class="line">    <span class="comment">// 记录各种日志</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 创建一个 docker engine</span></span><br><span class="line">    engine, err := docker.NewEnv()</span><br><span class="line">    <span class="keyword">if</span> err != nil &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 初始化 pipeline 并执行：此处为重点！！</span></span><br><span class="line">    err = pipeline.<span class="keyword">New</span>(work.Config,</span><br><span class="line">        pipeline.WithContext(ctx),</span><br><span class="line">        pipeline.WithLogger(defaultLogger),</span><br><span class="line">        pipeline.WithTracer(defaultTracer),</span><br><span class="line">        pipeline.WithEngine(engine),</span><br><span class="line">    ).Run()</span><br><span class="line"></span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> nil</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Run 方法逻辑，准备再正式执行前，打一个 120 sleep 的断点</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// Run starts the runtime and waits for it to complete.</span></span><br><span class="line">func (r *Runtime) Run() error &#123;</span><br><span class="line">    defer func() &#123;</span><br><span class="line">        r.engine.Destroy(r.ctx, r.spec)</span><br><span class="line">    &#125;()</span><br><span class="line"></span><br><span class="line">    r.started = time.Now().Unix()</span><br><span class="line">    <span class="keyword">if</span> err := r.engine.Setup(r.ctx, r.spec); err != nil &#123;</span><br><span class="line">        <span class="keyword">return</span> err</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// sleep 断点，观察连接数的增加，是在此断点前，还是断点后</span></span><br><span class="line">    fmt.Println(<span class="string">"sleeping 120s"</span>)</span><br><span class="line">    time.Sleep(time.Second * <span class="number">120</span>)</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">for</span> _, stage := range r.spec.Stages &#123;</span><br><span class="line">        select &#123;</span><br><span class="line">        <span class="keyword">case</span> &lt;-r.ctx.Done():</span><br><span class="line">            <span class="keyword">return</span> ErrCancel</span><br><span class="line">        <span class="keyword">case</span> err := &lt;-r.execAll(stage.Steps):</span><br><span class="line">            <span class="keyword">if</span> err != nil &#123;</span><br><span class="line">                r.err = err</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> r.err</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>改动之后，重新构建，部署 drone-agent。观察发现，在 sleep 动作发生时，drone-agent 的 unix socket 增加了 1 个，sleep 结束执行 pipeline ，unix socket 又增加了一个。</p>
+<ol>
+<li>sleep 之前，只有 r.engine.Setup 逻辑，所以，可以认为，执行 pipeline 前对 r.engine.Setup 的调用，一定有一个 unix socket 创建了但未释放。</li>
+<li>sleep 之后增加的 socket ，只能去 r.execAll 跟踪。</li>
+</ol>
+<p>①：r.engine.Setup 里的 unix socket 追查</p>
+<p>Setup 的逻辑其实很简单，就是创建 volume、network，所以，关于连接建立的逻辑，其实是在 e.client.VolumeCreate 之类的函数内</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// vendor/github.com/cncd/pipeline/pipeline/backend/docker/docker.go</span></span><br><span class="line"></span><br><span class="line">func (e *engine) Setup(_ context.Context, conf *backend.Config) error &#123;</span><br><span class="line">  </span><br><span class="line">  <span class="comment">// 如果配置了 volumes 的话，创建 volume</span></span><br><span class="line">	<span class="keyword">for</span> _, vol := range conf.Volumes &#123;</span><br><span class="line">		_, err := e.client.VolumeCreate(noContext, volume.VolumesCreateBody&#123;</span><br><span class="line">			Name:       vol.Name,</span><br><span class="line">			Driver:     vol.Driver,</span><br><span class="line">			DriverOpts: vol.DriverOpts,</span><br><span class="line">			<span class="comment">// Labels:     defaultLabels,</span></span><br><span class="line">		&#125;)</span><br><span class="line">		<span class="keyword">if</span> err != nil &#123;</span><br><span class="line">			<span class="keyword">return</span> err</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">	<span class="comment">// 如果配置了 Networks 的话，创建 Networks</span></span><br><span class="line">	<span class="keyword">for</span> _, network := range conf.Networks &#123;</span><br><span class="line">		_, err := e.client.NetworkCreate(noContext, network.Name, types.NetworkCreate&#123;</span><br><span class="line">			Driver:  network.Driver,</span><br><span class="line">			Options: network.DriverOpts,</span><br><span class="line">			<span class="comment">// Labels:  defaultLabels,</span></span><br><span class="line">		&#125;)</span><br><span class="line">		<span class="keyword">if</span> err != nil &#123;</span><br><span class="line">			<span class="keyword">return</span> err</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> nil</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>下面是 VolumeCreate 函数，这个函数，是在 docker 源码包中（vendor目录下）。</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// vendor/github.com/docker/docker/client/volume_create.go</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// VolumeCreate creates a volume in the docker host.</span></span><br><span class="line"></span><br><span class="line">func (cli *Client) VolumeCreate(ctx context.Context, options volumetypes.VolumesCreateBody) (types.Volume, error) &#123;</span><br><span class="line">	<span class="keyword">var</span> volume types.Volume</span><br><span class="line">	resp, err := cli.post(ctx, <span class="string">"/volumes/create"</span>, nil, options, nil)</span><br><span class="line">	<span class="keyword">if</span> err != nil &#123;</span><br><span class="line">		<span class="keyword">return</span> volume, err</span><br><span class="line">	&#125;</span><br><span class="line">	err = json.NewDecoder(resp.body).Decode(&amp;volume)</span><br><span class="line">	ensureReaderClosed(resp)</span><br><span class="line">	<span class="keyword">return</span> volume, err</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>初步来看，docker client 源码中，提供了 ensureReaderClosed 方法，此方法内部如下：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// vendor/github.com/docker/docker/client/request.go</span></span><br><span class="line"></span><br><span class="line">func ensureReaderClosed(response serverResponse) &#123;</span><br><span class="line">	<span class="keyword">if</span> body := response.body; body != nil &#123;</span><br><span class="line">		<span class="comment">// Drain up to 512 bytes and close the body to let the Transport reuse the connection</span></span><br><span class="line">		io.CopyN(ioutil.Discard, body, <span class="number">512</span>)</span><br><span class="line">		response.body.Close()</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从这个层面来看，docker client 源码提供的 API，是处理了 resp.Body.Close 释放链接的方法了。如此一来，应该生效才对。</p>
+<p>陷入两难境地：</p>
+<ol>
+<li>为什么 docker client 的源码包的 ensureReaderClosed 不生效？</li>
+<li>既然不生效，应该是使用姿势不对，一定有释放链接的方法？</li>
+</ol>
+<p>个人认为，docker client 自己设计缺陷造成 socket 泄漏的可能性应该比较小（要不社区早炸了），所以问题的重心，应该放在 docker 源码包的上层调用上，也就是：github.com/cncd/pipeline 。也就是说，从可能性上来说：github.com/cncd/pipeline 使用了 github.com/docker/docker/client，但是其使用姿势有问题，所以链接未释放——这种可能性比较大。</p>
+<h4 id="缩小排查范围，修改源码做验证"><a href="#缩小排查范围，修改源码做验证" class="headerlink" title="缩小排查范围，修改源码做验证"></a>缩小排查范围，修改源码做验证</h4><p>我们排查问题，肯定要有一个基线，也就是排查 问题，先基本判定，哪种可能性大，哪种可能性小，否则，茫然排查，会花费大量精力，还不一定有结果。</p>
+<p>目前来看，Drone 使用的源码包，可能出现 socket 泄漏问题的有 2 个：</p>
+<ol>
+<li>github.com/cncd/pipeline</li>
+<li>github.com/docker/docker/client</li>
+</ol>
+<p>先基本判定，docker 的源码包出问题的可能性小，毕竟 docker 社区庞大，如果 docker/client 包存在问题，社区应该有大量帖子讨论这个问题，或者有相关的 issue 在 github repo 中。然而，看了一下，只有一个 dockerd socket 泄漏问题，浏览了一下具体描述，与我们的问题不太相符。</p>
+<p>排查重心，先放到 github.com/cncd/pipeline 源码包。</p>
+<p>走读 pipeline 源码包，其提供了一个 Engine API，我们需要对此 API 改造，让其提供 Close 方法，关闭与 dockerd 的链接</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// vendor/github.com/cncd/pipeline/pipeline/backend/backend.go</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// Engine defines a container orchestration backend and is used</span></span><br><span class="line"><span class="comment">// to create and manage container resources.</span></span><br><span class="line">type Engine <span class="class"><span class="keyword">interface</span> </span>&#123;</span><br><span class="line">	<span class="comment">// Setup the pipeline environment.</span></span><br><span class="line">	Setup(context.Context, *Config) error</span><br><span class="line">	<span class="comment">// Start the pipeline step.</span></span><br><span class="line">	Exec(context.Context, *Step) error</span><br><span class="line">	<span class="comment">// Kill the pipeline step.</span></span><br><span class="line">	Kill(context.Context, *Step) error</span><br><span class="line">	<span class="comment">// Wait for the pipeline step to complete and returns</span></span><br><span class="line">	<span class="comment">// the completion results.</span></span><br><span class="line">	Wait(context.Context, *Step) (*State, error)</span><br><span class="line">	<span class="comment">// Tail the pipeline step logs.</span></span><br><span class="line">	Tail(context.Context, *Step) (io.ReadCloser, error)</span><br><span class="line">	<span class="comment">// Destroy the pipeline environment.</span></span><br><span class="line">	Destroy(context.Context, *Config) error</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>①：我们为 pipeline Engine Interface，补充一个 Close 方法</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// vendor/github.com/cncd/pipeline/pipeline/backend/backend.go</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// Engine defines a container orchestration backend and is used</span></span><br><span class="line"><span class="comment">// to create and manage container resources.</span></span><br><span class="line">type Engine <span class="class"><span class="keyword">interface</span> </span>&#123;</span><br><span class="line">	<span class="comment">// Setup the pipeline environment.</span></span><br><span class="line">	Setup(context.Context, *Config) error</span><br><span class="line">	<span class="comment">// Start the pipeline step.</span></span><br><span class="line">	Exec(context.Context, *Step) error</span><br><span class="line">	<span class="comment">// Kill the pipeline step.</span></span><br><span class="line">	Kill(context.Context, *Step) error</span><br><span class="line">	<span class="comment">// Wait for the pipeline step to complete and returns</span></span><br><span class="line">	<span class="comment">// the completion results.</span></span><br><span class="line">	Wait(context.Context, *Step) (*State, error)</span><br><span class="line">	<span class="comment">// Tail the pipeline step logs.</span></span><br><span class="line">	Tail(context.Context, *Step) (io.ReadCloser, error)</span><br><span class="line">	<span class="comment">// Destroy the pipeline environment.</span></span><br><span class="line">	Destroy(context.Context, *Config) error</span><br><span class="line">	</span><br><span class="line">	<span class="comment">// Close connections</span></span><br><span class="line">	Close() error</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>②：完善 pipeline Engine Interface 的实现</p>
+<p>修改前：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// vendor/github.com/cncd/pipeline/pipeline/backend/docker/docker.go</span></span><br><span class="line"></span><br><span class="line">type engine struct &#123;</span><br><span class="line">	client client.APIClient</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// New returns a new Docker Engine using the given client.</span></span><br><span class="line">func <span class="keyword">New</span>(cli client.APIClient) backend.Engine &#123;</span><br><span class="line">	<span class="keyword">return</span> &amp;engine&#123;</span><br><span class="line">		client: cli,</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>修改后：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// vendor/github.com/cncd/pipeline/pipeline/backend/docker/docker.go</span></span><br><span class="line"></span><br><span class="line">type engine struct &#123;</span><br><span class="line">	client *client.Client</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// New returns a new Docker Engine using the given client.</span></span><br><span class="line">func <span class="keyword">New</span>(cli *client.Client) backend.Engine &#123;</span><br><span class="line">	<span class="keyword">return</span> &amp;engine&#123;</span><br><span class="line">		client: cli,</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 这才是核心！！！！</span></span><br><span class="line"><span class="comment">// 增加 Close 方法，直接调用 docker Client 的 Close</span></span><br><span class="line">func (e *engine) Close() error &#123;</span><br><span class="line">	<span class="keyword">return</span> e.client.Close()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>④：pipeline 源码包毕竟是底包，我们还得修改一下上层调用，所谓的上层，也就是 Drone 了。</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Run starts the runtime and waits for it to complete.</span></span><br><span class="line">func (r *Runtime) Run() error &#123;</span><br><span class="line">	defer func() &#123;</span><br><span class="line">		r.engine.Destroy(r.ctx, r.spec)</span><br><span class="line">		</span><br><span class="line">		<span class="comment">// 补充一个 Close 调用</span></span><br><span class="line">		r.engine.Close()</span><br><span class="line">	&#125;()</span><br><span class="line"></span><br><span class="line">	r.started = time.Now().Unix()</span><br><span class="line">	<span class="keyword">if</span> err := r.engine.Setup(r.ctx, r.spec); err != nil &#123;</span><br><span class="line">		<span class="keyword">return</span> err</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> _, stage := range r.spec.Stages &#123;</span><br><span class="line">		select &#123;</span><br><span class="line">		<span class="keyword">case</span> &lt;-r.ctx.Done():</span><br><span class="line">			<span class="keyword">return</span> ErrCancel</span><br><span class="line">		<span class="keyword">case</span> err := &lt;-r.execAll(stage.Steps):</span><br><span class="line">			<span class="keyword">if</span> err != nil &#123;</span><br><span class="line">				r.err = err</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> r.err</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>重新打包编译，部署测试。通过多次测试，发现 socket 泄漏问题解决了。每次构建结束，socket 都会释放。</p>
+<h2 id="考虑提PR"><a href="#考虑提PR" class="headerlink" title="考虑提PR"></a>考虑提PR</h2><p>1、搜索相关 PR 是已存在</p>
+<p>既然问题出在 github.com/cncd/pipeline 的源码包上，那么，可以考虑修复之后，提交一个 PR 过去。</p>
+<p>但是，提 PR 之前，得先做搜索相关的 issue 和 PR，关键词：”leak”、”socket”、”close”</p>
+<p>搜到一个还在 Open 的 PR：<a href="https://github.com/cncd/pipeline/pull/20" target="_blank" rel="noopener">https://github.com/cncd/pipeline/pull/20</a></p>
+<p>这个 PR 的大意是：作者 @cedk 提交了一个 PR，作者认为，docker client 应该主动关闭它使用的 socket ，但作者没有提到，为什么要关，以及它的负面影响是什么。然而，可惜的是，这个 PR 在 17 年提出来，一直没有被官方采纳。</p>
+<p>2、重提 issue</p>
+<p>由于 pipeline 未正常关闭 docker client socket，存在 socket 泄漏问题比较严重，可能触发进程打开最大连接数上限，导致后续 drone-agent 停止服务。因此，我打算提交一个 issue ，问一下 pipeline 包的官方维护者，为什么之前的这个 PR 没过。</p>
+<p>参见：<a href="https://github.com/cncd/pipeline/issues/50" target="_blank" rel="noopener">https://github.com/cncd/pipeline/issues/50</a></p>
+<p>可惜的是，后来项目维护者说这个项目已经归档，不再维护了。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>其实，总结来说，Drone 存在的 unix domain socket 泄露问题，普遍存在于 v0.8.10 及以下版本。由于官方已不再维护 cncd/pipeline 项目，因此可以在项目里，修改 vendor 里的包来解决，不过这种方式并不优雅，也可以将 cncd/pipeline 这个包，提到项目级目录下，而不是放到 vendor 下。</p>
+<p>至于如何修改，前面已经给了示例，也可以参考之前别人提的 PR：<a href="https://github.com/cncd/pipeline/pull/20" target="_blank" rel="noopener">https://github.com/cncd/pipeline/pull/20</a> 。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>Donate comment here</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>打赏</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.png" alt="国南之境 微信支付">
+        <p>微信支付</p>
+      </div>
+    
+
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/k8s/" rel="tag"># k8s</a>
+          
+            <a href="/tags/Drone/" rel="tag"># Drone</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/08/11/23/" rel="next" title="源码分析：K8s CNI macvlan 网络插件，是否做了 ARP 宣告？">
+                <i class="fa fa-chevron-left"></i> 源码分析：K8s CNI macvlan 网络插件，是否做了 ARP 宣告？
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">国南之境</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">23</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                
+                  <span class="site-state-item-count">28</span>
+                  <span class="site-state-item-name">分类</span>
+                
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">28</span>
+                  <span class="site-state-item-name">标签</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#现存问题"><span class="nav-number">2.</span> <span class="nav-text">现存问题</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#问题"><span class="nav-number">2.0.1.</span> <span class="nav-text">问题</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#drone"><span class="nav-number">2.0.2.</span> <span class="nav-text">drone</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#这个问题，有什么影响？"><span class="nav-number">2.0.3.</span> <span class="nav-text">这个问题，有什么影响？</span></a></li></ol></li></ol><li class="nav-item nav-level-2"><a class="nav-link" href="#排查"><span class="nav-number">3.</span> <span class="nav-text">排查</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#复现问题"><span class="nav-number">3.0.1.</span> <span class="nav-text">复现问题</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#创建独立的-drone-agent-节点做测试"><span class="nav-number">3.0.2.</span> <span class="nav-text">创建独立的 drone-agent 节点做测试</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#代码层初步排查"><span class="nav-number">3.0.3.</span> <span class="nav-text">代码层初步排查</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#缩小排查范围，修改源码做验证"><span class="nav-number">3.0.4.</span> <span class="nav-text">缩小排查范围，修改源码做验证</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#考虑提PR"><span class="nav-number">4.</span> <span class="nav-text">考虑提PR</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">5.</span> <span class="nav-text">总结</span></a></li></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">国南之境</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://cdn.jsdelivr.net/npm/busuanzi@2.3.0/bsz.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("ui3Xsz1h0eom3WtwCf0d87Y6-gzGzoHsz", "WHVHSDeIgaLW1vEhsfWVw403");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
